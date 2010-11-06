@@ -1,0 +1,9 @@
+*.pyc
+.*.swp
+build/*
+dist/*
+*.egg-info/*
+venv/*
+MANIFEST.in
+
+objgraph.py
