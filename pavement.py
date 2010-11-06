@@ -9,6 +9,7 @@ from paver.setuputils import setup
 
 setup(
     name="mummy",
+    description="fast, efficient serialization",
     packages=["mummy"],
     version="0.1",
     author="Travis Parker",
