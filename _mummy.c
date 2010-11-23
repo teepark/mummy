@@ -827,6 +827,8 @@ python_dumps(PyObject *self, PyObject *args, PyObject *kwargs) {
 #endif
     }
 
+    Py_XDECREF(obj);
+    Py_XDECREF(default_handler);
     free(string.data);
 
     return result;
