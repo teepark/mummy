@@ -32,7 +32,7 @@ else:
         return d.iteritems()
 
 
-class BasicElmoTests(unittest.TestCase):
+class BasicMummyTests(unittest.TestCase):
     def encoding_reference(self, val, default=None):
         c = mummy.dumps(val, default)
         py = mummy.pure_python_dumps(val, default)
@@ -67,7 +67,7 @@ def _make_test(name, target):
     def test_pure_python_roundtrip(self):
         self.pure_python_roundtrip(target)
 
-    return type(name + 'Test', (BasicElmoTests,), locals())
+    return type(name + 'Test', (BasicMummyTests,), locals())
 
 
 def generate(targets):
@@ -162,7 +162,7 @@ class RecursionDepthTest(unittest.TestCase):
         self.assertRaises(ValueError, mummy.pure_python_dumps, l)
 
 
-class DefaultFormatterTest(BasicElmoTests):
+class DefaultFormatterTest(BasicMummyTests):
 	if decimal:
 		def decimal_formatter(self, d):
 			if isinstance(d, decimal.Decimal):
