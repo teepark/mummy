@@ -302,7 +302,7 @@ _dumpers = {
 }
 
 def pure_python_dumps(item, default=None, depth=0, compress=True):
-    "serialize a native python object into an mummy string"
+    "serialize a native python object into a mummy string"
     if default and not hasattr(default, "__call__"):
         raise TypeError("default must be callable or None")
     if depth >= MAX_DEPTH:
@@ -472,7 +472,7 @@ def _loads(data):
     return _loaders[kind](data[1:])
 
 def pure_python_loads(data):
-    "convert an mummy string into the python object it represents"
+    "convert a mummy string into the python object it represents"
     if not data:
         raise ValueError("no data from which to load")
     if ord(data[0]) >> 7:
