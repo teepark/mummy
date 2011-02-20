@@ -562,7 +562,7 @@ example: an address book schema
 
 _primitives = (bool, int, float, str)
 
-def _validate(schema, message):
+def _validate_message(schema, message):
     if schema in _primitives:
         return type(message) is schema
 
@@ -578,7 +578,7 @@ def _validate(schema, message):
 
         # recurse into sub-schemas and sub-messages
         return all(itertools.starmap(
-                _validate,
+                _validate_message,
                 itertools.izip(schema, message)))
 
     if isinstance(schema, dict):
@@ -591,27 +591,28 @@ def _validate(schema, message):
                 return False
 
         for key, value in message.iteritems():
+            keytype = type(key)
+
             # invalid key type
-            if key not in _primitives:
+            if keytype not in _primitives:
                 return False
 
             # key matched by a primitive instance in the schema's keys
             if key in schema:
-                if not _validate(schema[key], value):
+                if not _validate_message(schema[key], value):
                     return False
                 continue
 
             # (key,) found in the schema's keys
             tupkey = (key,)
             if tupkey in schema:
-                if not _validate(schema[tupkey], value):
+                if not _validate_message(schema[tupkey], value):
                     return False
                 continue
 
             # a catchall for the key's type is in the schema
-            typekey = type(key)
-            if typekey in schema:
-                if not _validate(schema[typekey], value):
+            if keytype in schema:
+                if not _validate_message(schema[keytype], value):
                     return False
                 continue
 
@@ -624,19 +625,110 @@ def _validate(schema, message):
     # appears to be an invalid schema -- it wasn't matched above
     return False
 
+def _known_keys(schema):
+    primitive_keys, tuple_keys = [], []
+    wildcards = False
+
+    for key in schema.iterkeys():
+        keytype = type(key)
+        if keytype is tuple:
+            tuple_keys.append(key)
+        elif keytype in _primitives:
+            primitive_keys.append(key)
+        else:
+            wildcards = True
+
+    primitive_keys.sort()
+    tuple_keys.sort()
+    return primitive_keys, tuple_keys, wildcards
+
+def _transform_message(schema, message):
+    if isinstance(schema, list):
+        return [_transform_message(s, m) for s, m in zip(schema, message)]
+
+    if not isinstance(schema, dict):
+        return message
+
+    result = []
+    primitive_keys, tuple_keys, wildcards = _known_keys(schema)
+
+    for key in primitive_keys:
+        result.append(_transform_message(schema[key], message[key]))
+
+    for key in tuple_keys:
+        if key[0] in message:
+            result.append(_transform_message(schema[key], message[key[0]]))
+        else:
+            result.append(None)
+
+    if wildcards:
+        used = set(primitive_keys + tuple_keys)
+        for key, value in message.iteritems():
+            if key not in used:
+                result.append(key)
+                result.append(_transform_message(schema[key], value))
+
+    return result
+
+def _untransform_message(schema, message):
+    if isinstance(schema, list):
+        return [_untransform_message(s, m) for s, m in zip(schema, message)]
+
+    if not isinstance(schema, dict):
+        return message
+
+    result = {}
+    primitive_keys, tuple_keys, wildcards = _known_keys(schema)
+    pklen, tklen = len(primitive_keys), len(tuple_keys)
+    tklen += pklen
+
+    for i, value in enumerate(message):
+        if i < pklen:
+            result[primitive_keys[i]] = _untransform_message(
+                    schema[primitive_keys[i]], value)
+        elif i < tklen:
+            if value is not None:
+                result[tuple_keys[i - pklen][0]] = _untransform_message(
+                        schema[tuple_keys[i - pklen]], value)
+        else:
+            result[value[0]] = _untransform_message(schema[value[0]], value[1])
+
+    return result
+
 class _BaseMessage(object):
-    def __init__(self, data):
-        self.data = data
+    def __init__(self, message):
+        self.message = message
+        self._validated = False
+        self._validation = None
+        self._transformed = False
+        self._transformation = None
 
     def validate(self):
-        return _validate(self.SCHEMA, self.data)
+        if not self._validated:
+            self._validation = _validate_message(self.SCHEMA, self.message)
+            self._validated = True
+        return self._validation
 
+    def transform(self):
+        if not self._transformed:
+            assert self.validate(), "schema validation failure"
+            self._transformation = _transform_message(
+                    self.SCHEMA, self.message)
+            self._transformed = True
+        return self._transformation
+
+    def dumps(self):
+        assert self.validate(), "schema validation failure"
+        return dumps(self.transform())
+
+    @classmethod
+    def untransform(cls, message):
+        return _untransform_message(cls.SCHEMA, message)
+
+    @classmethod
+    def loads(cls, message):
+        return cls.untransform(loads(message))
 
 class schema(type):
-    def __new__(taip, schema):
-        return type('Message', (_BaseMessage,), {})
-
-    def __init__(cls, schema):
-        cls.SCHEMA = schema
-
-
+    def __new__(metacls, schema):
+        return type('Message', (_BaseMessage,), {'SCHEMA': schema})
