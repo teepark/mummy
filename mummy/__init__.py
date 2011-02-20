@@ -63,6 +63,7 @@ back to if the extension is unavailable. the module-global `has_extension` is a
 boolean indicating whether the C extension is in use.
 """
 
+import itertools
 import struct
 import sys
 
@@ -492,3 +493,150 @@ except ImportError:
     dumps = pure_python_dumps
     loads = pure_python_loads
     has_extension = False
+
+
+##
+## Validated and Compressed Message Types
+##
+
+"""
+SCHEMAS:
+
+simple schemas:
+    - are just a basic atomic python type (the type object itself)
+        - bool
+        - int
+        - float
+        - str
+    - asserts that the validated object is an instance of that type
+
+list schemas:
+    - assert that the validated object is itself a list
+    - length 1 list schemas
+        - the item in the list schema is a schema which is used to match all
+          the contents of the validated list
+    - length 2 list schemas
+        - the second item must be None
+        - used just like a length 1 list schema but also asserts that the
+          validated list is not empty
+
+dict schemas:
+    - assert that the validated object is a dict
+    - values are schemas used to validate the validated dict's values
+    - keys are used to match up the sub-schemas to their values
+    - keys may be instances of simple types (bool, int, float, str)
+        - asserts that the exact key is present, and matches the corresponding
+          value to the sub-schema
+    - keys may be a length-1 tuple with a simple type instance
+        - used just like the type instance alone, except that the key is
+          optional
+        - may not coexist with the same simple instance un-tupled (so ('a',) is
+          illegal if 'a' is also present)
+    - keys may be simple type objects (the types, not instances)
+        - matches any key of that type that is not matched by a simple type
+          instance or tuple
+
+
+example: an address book schema
+-------------------------------
+[
+    {
+        'first_name': str,
+        'last_name': str,
+        'gender': bool, # false male, true female
+        'birthday': int, # unix timestamp
+        'address': {
+            'street_name': str,
+            'street_number': int,
+            ('sub_number',): str, # apt number or similar (the B in 345B)
+            'zip_code': int,
+            'city': str,
+            ('state',): str, # optional for countries without states
+            'country': str,
+        },
+        'hobbies': [str],
+    }
+]
+
+"""
+
+_primitives = (bool, int, float, str)
+
+def _validate(schema, message):
+    if schema in _primitives:
+        return type(message) is schema
+
+    # list schema
+    if isinstance(schema, list):
+        # but not a list message
+        if not isinstance(message, list):
+            return False
+
+        # empty message disallowed by schema
+        if len(schema) > 1 and not message:
+            return False
+
+        # recurse into sub-schemas and sub-messages
+        return all(itertools.starmap(
+                _validate,
+                itertools.izip(schema, message)))
+
+    if isinstance(schema, dict):
+        if not isinstance(message, dict):
+            return False
+
+        # assert all required keys are in the message
+        for key in schema.iterkeys():
+            if not isinstance(key, tuple) and key not in message:
+                return False
+
+        for key, value in message.iteritems():
+            # invalid key type
+            if key not in _primitives:
+                return False
+
+            # key matched by a primitive instance in the schema's keys
+            if key in schema:
+                if not _validate(schema[key], value):
+                    return False
+                continue
+
+            # (key,) found in the schema's keys
+            tupkey = (key,)
+            if tupkey in schema:
+                if not _validate(schema[tupkey], value):
+                    return False
+                continue
+
+            # a catchall for the key's type is in the schema
+            typekey = type(key)
+            if typekey in schema:
+                if not _validate(schema[typekey], value):
+                    return False
+                continue
+
+            # if nothing above matched, the key doesn't belong
+            return False
+
+        # we just have to make it this far without returning False
+        return True
+
+    # appears to be an invalid schema -- it wasn't matched above
+    return False
+
+class _BaseMessage(object):
+    def __init__(self, data):
+        self.data = data
+
+    def validate(self):
+        return _validate(self.SCHEMA, self.data)
+
+
+class schema(type):
+    def __new__(taip, schema):
+        return type('Message', (_BaseMessage,), {})
+
+    def __init__(cls, schema):
+        cls.SCHEMA = schema
+
+

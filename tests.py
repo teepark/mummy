@@ -1,13 +1,13 @@
 #!/usr/bin/env python
 
 try:
-	import decimal
+    import decimal
 except ImportError:
-	decimal = None
+    decimal = None
 try:
-	import fractions
+    import fractions
 except ImportError:
-	fractions = None
+    fractions = None
 from random import randrange
 import string
 import sys
@@ -163,32 +163,32 @@ class RecursionDepthTest(unittest.TestCase):
 
 
 class DefaultFormatterTest(BasicMummyTests):
-	if decimal:
-		def decimal_formatter(self, d):
-			if isinstance(d, decimal.Decimal):
-				exp = 0
-				while d != d.to_integral():
-					exp += 1
-					d *= 10
-				return ()
+    if decimal:
+        def decimal_formatter(self, d):
+            if isinstance(d, decimal.Decimal):
+                exp = 0
+                while d != d.to_integral():
+                    exp += 1
+                    d *= 10
+                return ()
 
-		def test_decimals(self):
-			d = decimal.Decimal((1, (1,2,3,4,5), -3))
-			f = self.decimal_formatter
-			self.encoding_reference(d, f)
-			self.decoding_reference(mummy.dumps(d, f))
+        def test_decimals(self):
+            d = decimal.Decimal((1, (1,2,3,4,5), -3))
+            f = self.decimal_formatter
+            self.encoding_reference(d, f)
+            self.decoding_reference(mummy.dumps(d, f))
 
-	if fractions:
-		def fraction_formatter(self, f):
-			if isinstance(f, fractions.Fraction):
-				return (f.numerator, f.denominator)
-			raise TypeError("unserializable")
+    if fractions:
+        def fraction_formatter(self, f):
+            if isinstance(f, fractions.Fraction):
+                return (f.numerator, f.denominator)
+            raise TypeError("unserializable")
 
-		def test_fractions(self):
-			f = fractions.Fraction(5, 7)
-			d = self.fraction_formatter
-			self.encoding_reference(f, d)
-			self.decoding_reference(mummy.dumps(f, d))
+        def test_fractions(self):
+            f = fractions.Fraction(5, 7)
+            d = self.fraction_formatter
+            self.encoding_reference(f, d)
+            self.decoding_reference(mummy.dumps(f, d))
 
 
 if __name__ == '__main__':
