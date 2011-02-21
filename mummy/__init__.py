@@ -76,7 +76,7 @@ except ImportError:
 if sys.version_info[0] >= 3:
     from functools import reduce
     _str = unicode = str
-    class str(bytes):
+    class string(bytes):
         def __getitem__(self, index):
             if isinstance(index, int):
                 return type(self)(super().__getitem__(
@@ -92,14 +92,20 @@ if sys.version_info[0] >= 3:
     long = int
     map = lambda *a: list(__builtins__['map'](*a))
     iteritems = lambda d: d.items()
+    iterkeys = lambda d: d.keys()
+    itervalues = lambda d: d.values()
     xrange = range
     chr = lambda x: bytes([x])
     ord = lambda x: bytes.__getitem__(x, 0)
     bytify = lambda x: x.encode('ascii')
+    izip = zip
 else:
     iteritems = lambda d: d.iteritems()
+    iterkeys = lambda d: d.iterkeys()
+    itervalues = lambda d: d.itervalues()
     bytify = lambda x: x
-    bytes = str
+    bytes = string = str
+    izip = itertools.izip
 
 
 __all__ = ["loads", "dumps", "pure_python_loads", "pure_python_dumps",
@@ -483,7 +489,7 @@ def pure_python_loads(data):
                 chr(ord(data[0]) & 0x7f), _load_int(data[1:5])[0], data[5:])
         data = kind + lzf.decompress(data, ucsize + 1)
 
-    return _loads(str(data))[0]
+    return _loads(string(data))[0]
 
 
 try:
@@ -579,18 +585,18 @@ def _validate_message(schema, message):
         # recurse into sub-schemas and sub-messages
         return all(itertools.starmap(
                 _validate_message,
-                itertools.izip(schema, message)))
+                izip(schema, message)))
 
     if isinstance(schema, dict):
         if not isinstance(message, dict):
             return False
 
         # assert all required keys are in the message
-        for key in schema.iterkeys():
+        for key in iterkeys(schema):
             if not isinstance(key, tuple) and key not in message:
                 return False
 
-        for key, value in message.iteritems():
+        for key, value in iteritems(message):
             keytype = type(key)
 
             # invalid key type
@@ -629,7 +635,7 @@ def _known_keys(schema):
     primitive_keys, tuple_keys = [], []
     wildcards = False
 
-    for key in schema.iterkeys():
+    for key in iterkeys(schema):
         keytype = type(key)
         if keytype is tuple:
             tuple_keys.append(key)
@@ -663,7 +669,7 @@ def _transform_message(schema, message):
 
     if wildcards:
         used = set(primitive_keys + tuple_keys)
-        for key, value in message.iteritems():
+        for key, value in iteritems(message):
             if key not in used:
                 result.append(key)
                 result.append(_transform_message(schema[key], value))
