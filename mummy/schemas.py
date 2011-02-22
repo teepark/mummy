@@ -98,7 +98,7 @@ from __future__ import absolute_import
 import itertools
 import sys
 
-from .compat import loads, dumps
+from .serialization import loads, dumps
 
 
 __all__ = ["schema", "OPTIONAL", "UNION", "ANY"]
@@ -115,6 +115,7 @@ if sys.version_info[0] >= 3:
         return d.keys()
     def itervalues(d):
         return d.values()
+    long = int
 else:
     izip = itertools.izip
     imap = itertools.imap
