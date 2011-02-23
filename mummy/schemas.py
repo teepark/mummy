@@ -117,6 +117,22 @@ to the schema.
 >>> abm.validate()
 >>> abm.message
 [{'first_name': 'Travis', 'last_name': 'Parker', 'is_male': True, 'hobbies': [], 'birthday': 442224000, 'address': {'city': 'Of', 'street_number': 11, 'country': 'Business', 'street_name': 'None', 'state': 'Your', 'zip_code': 12345}, 'properties': None}]
+
+
+Instances of the message class are able to shorten the serialized data by
+removing information that is already present in the schema itself, and the
+message class itself is able to undo that transformation.
+
+>>> abm.transform()
+[[['Of', 'Business', 'None', 11, 12345, 'Your', None], 442224000, 'Travis', [], True, 'Parker', None]]
+>>> AddressBookMessage.untransform(abm.transform()) == abm.message
+True
+
+
+The result is that messages serialized through a schema-based message class are
+much shorter than if the same data were serialized via basic mummy.dumps, but
+as long as the message receiver has the schema as well, no information is lost.
+
 >>> len(abm.dumps())
 64
 >>> len(mummy.dumps(abm.message))
@@ -170,7 +186,12 @@ _type_validations = {
 }
 
 class OPTIONAL(object):
-    "wraps a schema dictionary key to specify that it is optional"
+    """specifies that a piece of a schema is optional in some specific contexts
+
+    as a dictionary key, allows that key to be left out
+    as a member of a tuple schema, allows the message tuple item to be left out
+    as the only member of a list schema, allows the message list to be empty
+    """
     def __init__(self, schema):
         self.schema = schema
 
