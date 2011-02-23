@@ -80,10 +80,10 @@ sub-schemas.
 ...     'address': {
 ...         'street_name': str,
 ...         'street_number': int,
-...         'sub_number': OPTIONAL(str), #apt number or similar (the B in 345B)
+...         OPTIONAL('sub_number'): str, #apt number or similar (the B in 345B)
 ...         'zip_code': int,
 ...         'city': str,
-...         'state': OPTIONAL(str), #optional for countries without states
+...         OPTIONAL('state'): str, #optional for countries without states
 ...         'country': str,
 ...     },
 ...     'hobbies': [OPTIONAL(str)],
@@ -289,9 +289,7 @@ def _validate_dict(schema, message):
     if not isinstance(message, dict):
         return False, (message, schema)
 
-    required_keys = set(
-            k for k, v in iteritems(schema)
-            if not isinstance(v, OPTIONAL))
+    required_keys = set(k for k in schema if not isinstance(k, OPTIONAL))
     required_wildcards = required_keys.intersection(_primitives)
     required_keys.difference_update(_primitives)
 
@@ -310,8 +308,15 @@ def _validate_dict(schema, message):
 
     # extra non-allowed keys
     msg_keys.difference_update(schema)
+    msg_keys.difference_update(
+            k.schema for k in schema if isinstance(k, OPTIONAL))
     if set(imap(type, msg_keys)) - wildcards:
         return False, (message, schema)
+
+    schema = schema.copy()
+    schema.update(
+        dict((k.schema, v) for k, v in iteritems(schema)
+            if isinstance(k, OPTIONAL)))
 
     # now validate sub_schemas/sub_messages
     for key, sub_message in iteritems(message):
@@ -319,9 +324,6 @@ def _validate_dict(schema, message):
             sub_schema = schema[key]
         else:
             sub_schema = schema[type(key)]
-
-        if isinstance(sub_schema, OPTIONAL):
-            sub_schema = sub_schema.schema
 
         matched, info = _validate(sub_schema, sub_message)
         if not matched:
@@ -393,6 +395,9 @@ def _validate_list_schema(schema):
 
 def _validate_dict_schema(schema):
     for key in iterkeys(schema):
+        if isinstance(key, OPTIONAL):
+            key = key.schema
+
         if isinstance(key, _primitives + (long,)):
             continue
 
@@ -402,8 +407,6 @@ def _validate_dict_schema(schema):
         return False, schema
 
     for sub_schema in itervalues(schema):
-        if isinstance(sub_schema, OPTIONAL):
-            sub_schema = sub_schema.schema
         valid, info = _validate_schema(sub_schema)
         if not valid:
             return False, info
@@ -450,8 +453,9 @@ def _group_schema_keys(schema):
 
     key_set.difference_update(_type_validations)
 
-    optional = [k for k, v in iteritems(schema) if isinstance(v, OPTIONAL)]
+    optional = [k for k in schema if isinstance(k, OPTIONAL)]
     key_set.difference_update(optional)
+    optional = [k.schema for k in optional]
     optional.sort()
 
     required = list(key_set)
@@ -472,6 +476,11 @@ def _transform(schema, message):
     required, optional = _group_schema_keys(schema)
 
     msgkeys = set(message)
+
+    schema = schema.copy()
+    schema.update(
+            dict((k.schema, v) for k, v in iteritems(schema)
+                if isinstance(k, OPTIONAL)))
 
     result = []
     for key in required:
@@ -505,6 +514,11 @@ def _untransform(schema, message):
 
     for key, value in izip(required, message):
         result[key] = _untransform(schema[key], value)
+
+    schema = schema.copy()
+    schema.update(
+            dict((k.schema, v) for k, v in iteritems(schema)
+                if isinstance(k, OPTIONAL)))
 
     for key, value in izip(optional, itertools.islice(
             message, len(required), None)):
