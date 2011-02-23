@@ -69,27 +69,60 @@ ANY schemas:
       anything as valid
 
 
-example: an address book schema
--------------------------------
-[
-    {
-        'first_name': str,
-        'last_name': str,
-        'gender': bool, #false male, true female
-        'birthday': int, #unix timestamp
-        'address': {
-            'street_name': str,
-            'street_number': int,
-            'sub_number': OPTIONAL(str), #apt number or similar (the B in 345B)
-            'zip_code': int,
-            'city': str,
-            'state': OPTIONAL(str), #optional for countries without states
-            'country': str,
-        },
-        'hobbies': [str],
-        'properties': ANY,
-    }
-]
+A schema definition can be any of the above schema types and any allowed
+sub-schemas.
+
+>>> address_book_schema = [{
+...     'first_name': str,
+...     'last_name': str,
+...     'is_male': bool,
+...     'birthday': int, #unix timestamp
+...     'address': {
+...         'street_name': str,
+...         'street_number': int,
+...         'sub_number': OPTIONAL(str), #apt number or similar (the B in 345B)
+...         'zip_code': int,
+...         'city': str,
+...         'state': OPTIONAL(str), #optional for countries without states
+...         'country': str,
+...     },
+...     'hobbies': [OPTIONAL(str)],
+...     'properties': ANY,
+... }]
+
+
+The API for schemas is just 4 names: OPTIONAL, UNION, ANY. and schema. The
+first 3 were explained above, and schema is a metaclass whose constructor takes
+a schema (like address_book_schema above), and which produces a message class
+that can be used to validate, serialize, and deserialize messages which conform
+to the schema.
+
+>>> AddressBookMessage = mummy.schema(address_book_schema)
+>>> abm = AddressBookMessage([{
+...     'first_name': 'Travis',
+...     'last_name': 'Parker',
+...     'is_male': True,
+...     'birthday': 442224000,
+...     'address': {
+...         'street_number': 11,
+...         'zip_code': 12345,
+...         'street_name': 'None',
+...         'city': 'Of',
+...         'state': 'Your',
+...         'country': 'Business',
+...     },
+...     'hobbies': [],
+...     'properties': None,
+... }])
+>>> abm.validate()
+>>> abm.message
+[{'first_name': 'Travis', 'last_name': 'Parker', 'is_male': True, 'hobbies': [], 'birthday': 442224000, 'address': {'city': 'Of', 'street_number': 11, 'country': 'Business', 'street_name': 'None', 'state': 'Your', 'zip_code': 12345}, 'properties': None}]
+>>> len(abm.dumps())
+64
+>>> len(mummy.dumps(abm.message))
+190
+>>> AddressBookMessage.loads(abm.dumps()).message == abm.message
+True
 
 """
 
