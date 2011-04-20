@@ -836,18 +836,24 @@ python_dumps(PyObject *self, PyObject *args, PyObject *kwargs) {
 
 
 static PyObject *
-python_loads(PyObject *self, PyObject *args) {
-    PyObject *data, *result;
+python_loads(PyObject *self, PyObject *data) {
+    PyObject *result;
     offsetstring string;
     unsigned int ucsize;
     char *ucdata = NULL;
 
 #ifdef IS_PYTHON3
-    if (!PyArg_ParseTuple(args, "O!", &PyBytes_Type, &data)) return NULL;
+    if (!PyBytes_CheckExact(data)) {
+        PyErr_SetString(PyExc_TypeError, "argument 1 must be bytes");
+        return NULL;
+    }
     string.data = PyBytes_AS_STRING(data);
     string.length = PyBytes_GET_SIZE(data);
 #else
-    if (!PyArg_ParseTuple(args, "O!", &PyString_Type, &data)) return NULL;
+    if (!PyString_CheckExact(data)) {
+        PyErr_SetString(PyExc_TypeError, "argument 1 must be bytes");
+        return NULL;
+    }
     string.data = PyString_AS_STRING(data);
     string.length = PyString_GET_SIZE(data);
 #endif
@@ -886,8 +892,8 @@ python_loads(PyObject *self, PyObject *args) {
 static PyMethodDef methods[] = {
     {"dumps", (PyCFunction)python_dumps, METH_VARARGS | METH_KEYWORDS,
         "serialize a native python object into an mummy string"},
-    {"loads", python_loads, METH_VARARGS,
-        "convert an mummy string into the python object it represents"},
+    {"loads", python_loads, METH_O,
+        "convert a mummy string into the python object it represents"},
     {NULL, NULL, 0, NULL}
 };
 
