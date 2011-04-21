@@ -91,13 +91,16 @@ sub-schemas.
 ... }]
 
 
-The API for schemas is just 4 names: OPTIONAL, UNION, ANY. and schema. The
-first 3 were explained above, and schema is a metaclass whose constructor takes
-a schema (like address_book_schema above), and which produces a message class
-that can be used to validate, serialize, and deserialize messages which conform
-to the schema.
+The API for schemas is just 4 names: OPTIONAL, UNION, ANY, and Message.
+The first 3 were explained above. Message is a base class you can use to create
+message classes, just give them a SCHEMA attribute of a valid schema and they
+can be used to validate, shorten, and serialize their instances.
 
->>> AddressBookMessage = mummy.schema(address_book_schema)
+>>> import mummy
+>>> class AddressBookMessage(mummy.Message):
+...     SCHEMA = address_book_schema
+...
+
 >>> abm = AddressBookMessage([{
 ...     'first_name': 'Travis',
 ...     'last_name': 'Parker',
@@ -114,7 +117,9 @@ to the schema.
 ...     'hobbies': [],
 ...     'properties': None,
 ... }])
+
 >>> abm.validate()
+
 >>> abm.message
 [{'first_name': 'Travis', 'last_name': 'Parker', 'is_male': True, 'hobbies': [], 'birthday': 442224000, 'address': {'city': 'Of', 'street_number': 11, 'country': 'Business', 'street_name': 'None', 'state': 'Your', 'zip_code': 12345}, 'properties': None}]
 
@@ -129,9 +134,9 @@ message class itself is able to undo that transformation.
 True
 
 
-The result is that messages serialized through a schema-based message class are
-much shorter than if the same data were serialized via basic mummy.dumps, but
-as long as the message receiver has the schema as well, no information is lost.
+The result is that messages serialized through a Message class are much shorter
+than if the same data were serialized via basic mummy.dumps, but as long as the
+message receiver has the schema as well, no information is lost.
 
 >>> len(abm.dumps())
 64
@@ -150,7 +155,7 @@ import sys
 from .serialization import loads, dumps
 
 
-__all__ = ["schema", "OPTIONAL", "UNION", "ANY"]
+__all__ = ["Message", "OPTIONAL", "UNION", "ANY"]
 
 
 # python 2/3 compat stuff
@@ -547,7 +552,20 @@ class _Invalid(Exception):
 class InvalidSchema(_Invalid):
     pass
 
-class _BaseMessage(object):
+
+class _validated_schema(type):
+    def __init__(cls, *args, **kwargs):
+        super(_validated_schema, cls).__init__(*args, **kwargs)
+        if hasattr(cls, "SCHEMA"):
+            valid, info = _validate_schema(cls.SCHEMA)
+            if not valid:
+                raise InvalidSchema(info)
+
+        cls.InvalidMessage = type('InvalidMessage', (_Invalid,), {})
+
+class Message(object):
+    __metaclass__ = _validated_schema
+
     def __init__(self, message):
         self.message = message
         self._validation = None
@@ -576,13 +594,3 @@ class _BaseMessage(object):
     @classmethod
     def loads(cls, message):
         return cls(cls.untransform(loads(message)))
-
-class schema(type):
-    def __new__(metacls, schema):
-        valid, info = _validate_schema(schema)
-        if not valid:
-            raise InvalidSchema(info)
-
-        return type.__new__(metacls, 'Message', (_BaseMessage,), {
-            'SCHEMA': schema,
-            'InvalidMessage': type('InvalidMessage', (_Invalid,), {})})

@@ -65,8 +65,8 @@ from __future__ import absolute_import
 
 from .serialization import \
         loads, dumps, pure_python_loads, pure_python_dumps, has_extension
-from .schemas import schema, OPTIONAL, UNION, ANY
+from .schemas import Message, OPTIONAL, UNION, ANY
 
 
 __all__ = ["loads", "dumps", "pure_python_loads", "pure_python_dumps",
-        "has_extension", "schema", "OPTIONAL", "UNION", "ANY"]
+        "has_extension", "Message", "OPTIONAL", "UNION", "ANY"]

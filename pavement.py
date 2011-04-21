@@ -51,3 +51,7 @@ def clean():
                 if exc.args[0] == errno.EACCES:
                     continue
                 raise
+
+@task
+def test():
+    sh("nosetests")
