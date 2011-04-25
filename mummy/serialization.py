@@ -71,6 +71,13 @@ TYPE_SHORTTUPLE = 0x11
 TYPE_SHORTSET = 0x12
 TYPE_SHORTDICT = 0x13
 
+TYPE_MEDLIST = 0x14
+TYPE_MEDTUPLE = 0x15
+TYPE_MEDSET = 0x16
+TYPE_MEDDICT = 0x17
+TYPE_MEDSTR = 0x18
+TYPE_MEDUTF8 = 0x19
+
 
 TYPEMAP = {
     type(None): TYPE_NONE,
@@ -91,31 +98,43 @@ def _get_type_code(x):
     if type(x) is list:
         if len(x) < 256:
             return TYPE_SHORTLIST
+        if len(x) < 65536:
+            return TYPE_MEDLIST
         return TYPE_LIST
 
     if type(x) is tuple:
         if len(x) < 256:
             return TYPE_SHORTTUPLE
+        if len(x) < 65536:
+            return TYPE_MEDTUPLE
         return TYPE_TUPLE
 
     if type(x) is set:
         if len(x) < 256:
             return TYPE_SHORTSET
+        if len(x) < 65536:
+            return TYPE_MEDSET
         return TYPE_SET
 
     if type(x) is dict:
         if len(x) < 256:
             return TYPE_SHORTDICT
+        if len(x) < 65536:
+            return TYPE_MEDDICT
         return TYPE_DICT
 
     if type(x) is bytes:
         if len(x) < 256:
             return TYPE_SHORTSTR
+        if len(x) < 65536:
+            return TYPE_MEDSTR
         return TYPE_LONGSTR
 
     if type(x) is unicode:
         if len(x.encode('utf8')) < 256:
             return TYPE_SHORTUTF8
+        if len(x.encode('utf8')) < 65536:
+            return TYPE_MEDUTF8
         return TYPE_LONGUTF8
 
     if type(x) in (int, long):
@@ -153,6 +172,9 @@ def _dump_uchar(x, depth=0, default=None):
 def _dump_short(x, depth=0, default=None):
     return struct.pack("!h", x)
 
+def _dump_ushort(x, depth=0, default=None):
+    return struct.pack("!H", x)
+
 def _dump_int(x, depth=0, default=None):
     return struct.pack("!i", x)
 
@@ -187,11 +209,17 @@ def _dump_double(x, depth=0, default=None):
 def _dump_shortstr(x, depth=0, default=None):
     return _dump_uchar(len(x)) + x
 
+def _dump_medstr(x, depth=0, default=None):
+    return _dump_ushort(len(x)) + x
+
 def _dump_longstr(x, depth=0, default=None):
     return _dump_uint(len(x)) + x
 
 def _dump_shortutf8(x, depth=0, default=None):
     return _dump_shortstr(x.encode('utf8'))
+
+def _dump_medutf8(x, depth=0, default=None):
+    return _dump_medstr(x.encode('utf8'))
 
 def _dump_longutf8(x, depth=0, default=None):
     return _dump_longstr(x.encode('utf8'))
@@ -209,14 +237,26 @@ def _dump_dict(x, depth=0, default=None):
             reduce(lambda a, b: a.extend(b) or a, iteritems(x), []))
 
 def _dump_shortlist(x, depth=0, default=None):
-    return _dump_uchar(len(x)) + "".join(
+    return _dump_uchar(len(x)) + bytify("").join(
             pure_python_dumps(item, default, depth + 1, compress=0)
             for item in x)
 
 _dump_shorttuple = _dump_shortset = _dump_shortlist
 
 def _dump_shortdict(x, depth=0, default=None):
-    return _dump_uchar(len(x)) + "".join(
+    return _dump_uchar(len(x)) + bytify("").join(
+            pure_python_dumps(item, default, depth + 1, compress=0) for item in
+            reduce(lambda a, b: a.extend(b) or a, iteritems(x), []))
+
+def _dump_medlist(x, depth=0, default=None):
+    return _dump_ushort(len(x)) + bytify("").join(
+            pure_python_dumps(item, default, depth + 1, compress=0)
+            for item in x)
+
+_dump_medtuple = _dump_medset = _dump_medlist
+
+def _dump_meddict(x, depth=0, default=None):
+    return _dump_ushort(len(x)) + bytify("").join(
             pure_python_dumps(item, default, depth + 1, compress=0) for item in
             reduce(lambda a, b: a.extend(b) or a, iteritems(x), []))
 
@@ -230,17 +270,23 @@ _dumpers = {
     TYPE_HUGE: _dump_huge,
     TYPE_DOUBLE: _dump_double,
     TYPE_SHORTSTR: _dump_shortstr,
+    TYPE_MEDSTR: _dump_medstr,
     TYPE_LONGSTR: _dump_longstr,
     TYPE_SHORTUTF8: _dump_shortutf8,
+    TYPE_MEDUTF8: _dump_medutf8,
     TYPE_LONGUTF8: _dump_longutf8,
     TYPE_LIST: _dump_list,
     TYPE_TUPLE: _dump_tuple,
     TYPE_SET: _dump_set,
     TYPE_DICT: _dump_dict,
     TYPE_SHORTLIST: _dump_shortlist,
+    TYPE_MEDLIST: _dump_medlist,
     TYPE_SHORTTUPLE: _dump_shorttuple,
+    TYPE_MEDTUPLE: _dump_medtuple,
     TYPE_SHORTSET: _dump_shortset,
+    TYPE_MEDSET: _dump_medset,
     TYPE_SHORTDICT: _dump_shortdict,
+    TYPE_MEDDICT: _dump_meddict,
 }
 
 def pure_python_dumps(item, default=None, depth=0, compress=True):
@@ -288,6 +334,9 @@ def _load_uchar(x):
 def _load_short(x):
     return struct.unpack("!h", x[:2])[0], 2
 
+def _load_ushort(x):
+    return struct.unpack("!H", x[:2])[0], 2
+
 def _load_int(x):
     return struct.unpack("!i", x[:4])[0], 4
 
@@ -318,12 +367,20 @@ def _load_shortstr(x):
     width = _load_uchar(x)[0] + 1
     return x[1:width], width
 
+def _load_medstr(x):
+    width = _load_ushort(x)[0] + 2
+    return x[2:width], width
+
 def _load_longstr(x):
     width = _load_uint(x)[0] + 4
     return x[4:width], width
 
 def _load_shortutf8(x):
     str, width = _load_shortstr(x)
+    return str.decode('utf8'), width
+
+def _load_medutf8(x):
+    str, width = _load_medstr(x)
     return str.decode('utf8'), width
 
 def _load_longutf8(x):
@@ -372,7 +429,7 @@ def _load_shorttuple(x):
     return tuple(lst), width
 
 def _load_shortset(x):
-    lst, width = _load_list(x)
+    lst, width = _load_shortlist(x)
     return set(lst), width
 
 def _load_shortdict(x):
@@ -386,6 +443,35 @@ def _load_shortdict(x):
         result[key] = value
     return result, width
 
+def _load_medlist(x):
+    length, width = _load_ushort(x)
+    result = []
+    for i in xrange(length):
+        item, item_width = _loads(x[width:])
+        result.append(item)
+        width += item_width + 1
+    return result, width
+
+def _load_medtuple(x):
+    lst, width = _load_medlist(x)
+    return tuple(lst), width
+
+def _load_medset(x):
+    lst, width = _load_medlist(x)
+    return set(lst), width
+
+def _load_meddict(x):
+    length, width = _load_ushort(x)
+    result = {}
+    for i in xrange(length):
+        key, keywidth = _loads(x[width:])
+        width += keywidth + 1
+        value, valuewidth = _loads(x[width:])
+        width += valuewidth + 1
+        result[key] = value
+    return result, width
+
+
 _loaders = {
     TYPE_NONE: _load_none,
     TYPE_BOOL: _load_bool,
@@ -396,17 +482,23 @@ _loaders = {
     TYPE_HUGE: _load_huge,
     TYPE_DOUBLE: _load_double,
     TYPE_SHORTSTR: _load_shortstr,
+    TYPE_MEDSTR: _load_medstr,
     TYPE_LONGSTR: _load_longstr,
     TYPE_SHORTUTF8: _load_shortutf8,
+    TYPE_MEDUTF8: _load_medutf8,
     TYPE_LONGUTF8: _load_longutf8,
     TYPE_LIST: _load_list,
     TYPE_TUPLE: _load_tuple,
     TYPE_SET: _load_set,
     TYPE_DICT: _load_dict,
     TYPE_SHORTLIST: _load_shortlist,
+    TYPE_MEDLIST: _load_medlist,
     TYPE_SHORTTUPLE: _load_shorttuple,
+    TYPE_MEDTUPLE: _load_medtuple,
     TYPE_SHORTSET: _load_shortset,
+    TYPE_MEDSET: _load_medset,
     TYPE_SHORTDICT: _load_shortdict,
+    TYPE_MEDDICT: _load_meddict,
 }
 
 def _loads(data):

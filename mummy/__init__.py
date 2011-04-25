@@ -52,6 +52,8 @@ first byte is the type:
 * tuple: same as list, only difference is the type
 * set: same as list, only difference is the type
 * dictionary: flatten the .items(), then same as list except for the type
+* short list, short tuple, short set, short dict: same as above but with 1
+        byte headers
 
 all the number types are signed and stored big-endian, except that all header
 numbers are unsigned.

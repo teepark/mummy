@@ -83,6 +83,13 @@
 #define TYPE_SHORTSET 0x12
 #define TYPE_SHORTDICT 0x13
 
+#define TYPE_MEDLIST 0x14
+#define TYPE_MEDTUPLE 0x15
+#define TYPE_MEDSET 0x16
+#define TYPE_MEDDICT 0x17
+#define TYPE_MEDSTR 0x18
+#define TYPE_MEDUTF8 0x19
+
 
 #define MAX_DEPTH 256
 #define INITIAL_BUFFER_SIZE 0x1000
@@ -302,7 +309,8 @@ dump_one(PyObject *obj, offsetstring *string, PyObject *default_handler,
 #endif
         /*
          * PyStrings/PyBytes get a 1-byte header if they fit in 256 bytes,
-         * otherwise a 4-byte header (TYPE_SHORTSTR or TYPE_LONGSTR)
+         * 2-byte header if they fit in 65536 bytes, otherwise a 4-byte header
+         * (TYPE_SHORTSTR, TYPE_MEDSTR or TYPE_LONGSTR)
          */
 #ifdef IS_PYTHON3
         pst = PyBytes_GET_SIZE(obj);
@@ -314,6 +322,20 @@ dump_one(PyObject *obj, offsetstring *string, PyObject *default_handler,
             if (rc) return rc;
             string->data[string->offset++] = TYPE_SHORTSTR;
             *(uint8_t *)(string->data + string->offset++) = (uint8_t)pst;
+#ifdef IS_PYTHON3
+            memcpy(string->data + string->offset, PyBytes_AS_STRING(obj), pst);
+#else
+            memcpy(string->data + string->offset, PyString_AS_STRING(obj), pst);
+#endif
+            string->offset += pst;
+            return 0;
+        }
+
+        if (pst < 65536) {
+            if ((rc = ensure_space(string, pst + 3))) return rc;
+            string->data[string->offset++] = TYPE_MEDSTR;
+            *(uint16_t *)(string->data + string->offset) = htons((uint16_t)pst);
+            string->offset += 2;
 #ifdef IS_PYTHON3
             memcpy(string->data + string->offset, PyBytes_AS_STRING(obj), pst);
 #else
@@ -339,8 +361,6 @@ dump_one(PyObject *obj, offsetstring *string, PyObject *default_handler,
     if (PyUnicode_CheckExact(obj)) {
         /*
          * PyUnicodes get encoded utf8 and then handled just like PyStrings
-         * there is a separate type for <256 bytes, and they get a 1 or 4 byte
-         * header (TYPE_SHORTUTF8 or TYPE_LONGUTF8)
          */
         obj = PyUnicode_AsUTF8String(obj);
 #ifdef IS_PYTHON3
@@ -361,6 +381,23 @@ dump_one(PyObject *obj, offsetstring *string, PyObject *default_handler,
                     pst);
 #endif
             string->offset += pst + 1;
+            Py_DECREF(obj);
+            return 0;
+        }
+
+        if (pst < 65536) {
+            if ((rc = ensure_space(string, pst + 3))) return rc;
+            string->data[string->offset++] = TYPE_MEDUTF8;
+            *(uint16_t *)(string->data + string->offset) = htons((uint16_t)pst);
+#ifdef IS_PYTHON3
+            memcpy(string->data + string->offset + 2,
+                    PyBytes_AS_STRING(obj), pst);
+#else
+            memcpy(string->data + string->offset + 2,
+                    PyString_AS_STRING(obj), pst);
+#endif
+            string->offset += pst + 2;
+            Py_DECREF(obj);
             return 0;
         }
 
@@ -376,12 +413,14 @@ dump_one(PyObject *obj, offsetstring *string, PyObject *default_handler,
                 pst);
 #endif
         string->offset += pst + 4;
+        Py_DECREF(obj);
         return 0;
     }
     if (PyList_CheckExact(obj)) {
         /*
-         * PyList gets a 1-byte or 4-byte unsigned header (TYPE_SHORTLIST
-         * or TYPE_LIST) containing the number of elements (not bytes)
+         * PyList gets a 1-byte, 2-byte or 4-byte unsigned header
+         * (TYPE_SHORTLIST, TYPE_MEDLIST or TYPE_LIST) containing
+         * the number of elements (not bytes)
          */
         pst = PyList_GET_SIZE(obj);
         if (pst < 256) {
@@ -389,6 +428,12 @@ dump_one(PyObject *obj, offsetstring *string, PyObject *default_handler,
             if (rc) return rc;
             string->data[string->offset++] = TYPE_SHORTLIST;
             *(uint8_t *)(string->data + string->offset++) = (uint8_t)pst;
+        }
+        else if (pst < 65536) {
+            if ((rc = ensure_space(string, 3))) return rc;
+            string->data[string->offset++] = TYPE_MEDLIST;
+            *(uint16_t *)(string->data + string->offset) = htons((uint16_t)pst);
+            string->offset += 2;
         }
         else {
             rc = ensure_space(string, 5);
@@ -416,6 +461,12 @@ dump_one(PyObject *obj, offsetstring *string, PyObject *default_handler,
             string->data[string->offset++] = TYPE_SHORTTUPLE;
             *(uint8_t *)(string->data + string->offset++) = (uint8_t)pst;
         }
+        else if (pst < 65536) {
+            if((rc = ensure_space(string, 3))) return rc;
+            string->data[string->offset++] = TYPE_MEDTUPLE;
+            *(uint16_t *)(string->data + string->offset) = htons((uint16_t)pst);
+            string->offset += 2;
+        }
         else {
             rc = ensure_space(string, 5);
             if (rc) return rc;
@@ -435,8 +486,8 @@ dump_one(PyObject *obj, offsetstring *string, PyObject *default_handler,
     if (PyAnySet_CheckExact(obj)) {
 #endif
         /*
-         * PySets have a type TYPE_[SHORT]SET but
-         * otherwise are encoded like PyLists
+         * PySets have a type TYPE_[SHORT|MED]SET
+         * but otherwise are encoded like PyLists
          */
         pst = PySet_GET_SIZE(obj);
         if (pst < 256) {
@@ -444,6 +495,12 @@ dump_one(PyObject *obj, offsetstring *string, PyObject *default_handler,
             if (rc) return rc;
             string->data[string->offset++] = TYPE_SHORTSET;
             *(uint8_t *)(string->data + string->offset++) = (uint8_t)pst;
+        }
+        else if (pst < 65536) {
+            if ((rc = ensure_space(string, 3))) return rc;
+            string->data[string->offset++] = TYPE_MEDSET;
+            *(uint16_t *)(string->data + string->offset) = htons((uint16_t)pst);
+            string->offset += 2;
         }
         else {
             rc = ensure_space(string, 5);
@@ -475,6 +532,12 @@ dump_one(PyObject *obj, offsetstring *string, PyObject *default_handler,
             string->data[string->offset++] = TYPE_SHORTDICT;
             *(uint8_t *)(string->data + string->offset++) = (uint8_t)pst;
         }
+        else if (pst < 65536) {
+            if ((rc = ensure_space(string, 3))) return rc;
+            string->data[string->offset++] = TYPE_MEDDICT;
+            *(uint16_t *)(string->data + string->offset) = htons((uint16_t)pst);
+            string->offset += 2;
+        }
         else {
             rc = ensure_space(string, 5);
             if (rc) return rc;
@@ -496,12 +559,16 @@ dump_one(PyObject *obj, offsetstring *string, PyObject *default_handler,
     }
 
     if (default_handler != Py_None) {
-        // give our obj reference to default_handler
+        // give an obj reference to default_handler
+        Py_INCREF(obj);
         handler_args = PyTuple_New(1);
         PyTuple_SET_ITEM(handler_args, 0, obj);
-        obj = PyObject_Call(default_handler, handler_args, NULL);
+        if (!(obj = PyObject_Call(default_handler, handler_args, NULL)))
+            return NULL;
         // don't increment depth, but don't pass on default_handler either
-        return dump_one(obj, string, Py_None, depth);
+        value = dump_one(obj, string, Py_None, depth);
+        Py_DECREF(handler_args);
+        return value;
     }
 
     PyErr_SetString(PyExc_TypeError, "unserializable type");
@@ -598,6 +665,20 @@ load_one(offsetstring *string, char intern) {
 #endif
         string->offset += size;
         break;
+    case TYPE_MEDSTR:
+        HAS_SPACE(string, 2);
+        size = ntohs(*(uint16_t *)(string->data + string->offset));
+        string->offset += 2;
+        HAS_SPACE(string, size);
+#ifdef IS_PYTHON3
+        obj = PyBytes_FromStringAndSize(
+                string->data + string->offset, size);
+#else
+        obj = PyString_FromStringAndSize(
+                string->data + string->offset, size);
+#endif
+        string->offset += size;
+        break;
     case TYPE_LONGSTR:
         HAS_SPACE(string, 4);
         size = ntohl(*(uint32_t *)(string->data + string->offset));
@@ -620,6 +701,15 @@ load_one(offsetstring *string, char intern) {
                 string->data + string->offset, size, "strict");
         string->offset += size;
         break;
+    case TYPE_MEDUTF8:
+        HAS_SPACE(string, 2);
+        size = ntohs(*(uint16_t *)(string->data + string->offset));
+        string->offset += 2;
+        HAS_SPACE(string, size);
+        obj = PyUnicode_DecodeUTF8(
+                string->data + string->offset, size, "strict");
+        string->offset += size;
+        break;
     case TYPE_LONGUTF8:
         HAS_SPACE(string, 4);
         size = ntohl(*(uint32_t *)(string->data + string->offset));
@@ -635,7 +725,18 @@ load_one(offsetstring *string, char intern) {
         obj = PyList_New(size);
         for (i = 0; i < size; i++) {
             value = load_one(string, 0);
-            if (value == NULL) BREAKOUT(obj);
+            if (value == NULL) BREAKOUT(obj)
+            PyList_SET_ITEM(obj, i, value);
+        }
+        break;
+    case TYPE_MEDLIST:
+        HAS_SPACE(string, 2);
+        size = ntohs(*(uint16_t *)(string->data + string->offset));
+        string->offset += 2;
+        obj = PyList_New(size);
+        for (i = 0; i < size; i++) {
+            value = load_one(string, 0);
+            if (value == NULL) BREAKOUT(obj)
             PyList_SET_ITEM(obj, i, value);
         }
         break;
@@ -646,7 +747,7 @@ load_one(offsetstring *string, char intern) {
         obj = PyList_New(size);
         for (i = 0; i < size; i++) {
             value = load_one(string, 0);
-            if (value == NULL) BREAKOUT(obj);
+            if (value == NULL) BREAKOUT(obj)
             PyList_SET_ITEM(obj, i, value);
         }
         break;
@@ -656,7 +757,18 @@ load_one(offsetstring *string, char intern) {
         obj = PyTuple_New(size);
         for (i = 0; i < size; i++) {
             value = load_one(string, 0);
-            if (value == NULL) BREAKOUT(obj);
+            if (value == NULL) BREAKOUT(obj)
+            PyTuple_SET_ITEM(obj, i, value);
+        }
+        break;
+    case TYPE_MEDTUPLE:
+        HAS_SPACE(string, 2);
+        size = ntohs(*(uint16_t *)(string->data + string->offset));
+        string->offset += 2;
+        obj = PyTuple_New(size);
+        for (i = 0; i < size; i++) {
+            value = load_one(string, 0);
+            if (value == NULL) BREAKOUT(obj)
             PyTuple_SET_ITEM(obj, i, value);
         }
         break;
@@ -667,13 +779,33 @@ load_one(offsetstring *string, char intern) {
         obj = PyTuple_New(size);
         for (i = 0; i < size; i++) {
             value = load_one(string, 0);
-            if (value == NULL) BREAKOUT(obj);
+            if (value == NULL) BREAKOUT(obj)
             PyTuple_SET_ITEM(obj, i, value);
         }
         break;
     case TYPE_SHORTSET:
         HAS_SPACE(string, 1);
         size = *(char *)(string->data + string->offset++);
+#if PY_MAJOR_VERSION == 2 && PY_MINOR_VERSION <= 4
+        obj = PySet_Type.tp_alloc(&PySet_Type, 0);
+        ((PySetObject *)obj)->data = PyDict_New();
+#else
+        obj = PySet_New(NULL);
+#endif
+        for (i = 0; i < size; i++) {
+            value = load_one(string, 1);
+            if (value == NULL) BREAKOUT(obj)
+#if PY_MAJOR_VERSION == 2 && PY_MINOR_VERSION <= 4
+            PyDict_SetItem(((PySetObject *)obj)->data, value, Py_True);
+#else
+            PySet_Add(obj, value);
+#endif
+        }
+        break;
+    case TYPE_MEDSET:
+        HAS_SPACE(string, 2);
+        size = ntohs(*(uint16_t *)(string->data + string->offset));
+        string->offset += 2;
 #if PY_MAJOR_VERSION == 2 && PY_MINOR_VERSION <= 4
         obj = PySet_Type.tp_alloc(&PySet_Type, 0);
         ((PySetObject *)obj)->data = PyDict_New();
@@ -716,16 +848,34 @@ load_one(offsetstring *string, char intern) {
         obj = PyDict_New();
         while (size) {
             key = load_one(string, 1);
-            if (key == NULL) BREAKOUT(obj);
+            if (key == NULL) BREAKOUT(obj)
             value = load_one(string, 0);
             if (value == NULL) {
                 Py_XDECREF(key);
-                BREAKOUT(obj);
+                BREAKOUT(obj)
             }
             PyDict_SetItem(obj, key, value);
             Py_XDECREF(key);
             Py_XDECREF(value);
             size--;
+        }
+        break;
+    case TYPE_MEDDICT:
+        HAS_SPACE(string, 2);
+        size = ntohs(*(uint16_t *)(string->data + string->offset));
+        string->offset += 2;
+        obj = PyDict_New();
+        while (size--) {
+            key = load_one(string, 1);
+            if (key == NULL) BREAKOUT(obj)
+            value = load_one(string, 0);
+            if (value == NULL) {
+                Py_XDECREF(key);
+                BREAKOUT(obj)
+            }
+            PyDict_SetItem(obj, key, value);
+            Py_XDECREF(key);
+            Py_XDECREF(value);
         }
         break;
     case TYPE_DICT:
@@ -735,11 +885,11 @@ load_one(offsetstring *string, char intern) {
         obj = PyDict_New();
         while (size) {
             key = load_one(string, 1);
-            if (key == NULL) BREAKOUT(obj);
+            if (key == NULL) BREAKOUT(obj)
             value = load_one(string, 0);
             if (value == NULL) {
                 Py_XDECREF(key);
-                BREAKOUT(obj);
+                BREAKOUT(obj)
             }
             PyDict_SetItem(obj, key, value);
             Py_XDECREF(key);
