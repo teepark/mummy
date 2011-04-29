@@ -532,9 +532,6 @@ def _load_datetime(x):
             _load_time(x[4:10])[0]), 10
 
 def _load_timedelta(x):
-    print _load_int(x)
-    print _load_int(x[4:8])
-    print _load_int(x[8:12])
     return (datetime.timedelta(
             _load_int(x)[0], _load_int(x[4:8])[0], _load_int(x[8:12])[0]), 12)
 
