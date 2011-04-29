@@ -94,6 +94,7 @@
 
 #define TYPE_DATE 0x1A
 #define TYPE_TIME 0x1B
+#define TYPE_DATETIME 0x1C
 
 
 #define MAX_DEPTH 256
@@ -583,14 +584,14 @@ dump_one(PyObject *obj, offsetstring *string, PyObject *default_handler,
          * PyTimes have the type TYPE_TIME, then 1, 1, 1 and 3 bytes
          * for hour, minute, second and microsecond, respectively
          */
-        /* ensure_space one more than we need, because we are going to set the
-           last 3-byte chunk using the 3 high bits of a uint32_t. so an extra
-           byte is going to be zeroed out.*/
         if (((PyDateTime_Time *)obj)->hastzinfo) {
             PyErr_SetString(PyExc_ValueError,
                     "can't serialize date objects with tzinfo");
             return -1;
         }
+        /* ensure_space one more than we need, because we are going to set the
+           last 3-byte chunk using the 3 high bits of a uint32_t. so an extra
+           byte is going to be zeroed out.*/
         if ((rc = ensure_space(string, 8))) return rc;
         string->data[string->offset++] = TYPE_TIME;
         chardata = ((PyDateTime_Time *)obj)->data;
@@ -602,6 +603,36 @@ dump_one(PyObject *obj, offsetstring *string, PyObject *default_handler,
         /* don't increment the offset through the extra byte we zeroed out,
            so it can be used in the next thing dumped if this is a sequence */
         string->offset += 6;
+        return 0;
+    }
+    if (Py_TYPE(obj) == PyDateTimeAPI->DateTimeType) {
+        /*
+         * PyDateTimes have the type TYPE_DATETIME followed by 2, 1, 1, 1, 1,
+         * 1 and 3 bytes for year, month, day, hour, minute, second and
+         * microsecond, respectively (each big-endian unsigned)
+         */
+        if (((PyDateTime_DateTime *)obj)->hastzinfo) {
+            PyErr_SetString(PyExc_ValueError,
+                    "can't serialize datetime objects with tzinfo");
+            return -1;
+        }
+        /* ensure_space one more than we need, because we are going to set the
+           last 3-byte chunk using the 3 high bits of a uint32_t. so an extra
+           byte is going to be zeroed out.*/
+        if ((rc = ensure_space(string, 12))) return rc;
+        string->data[string->offset++] = TYPE_DATETIME;
+        chardata = ((PyDateTime_Time *)obj)->data;
+        *(uint16_t *)(string->data + string->offset) = *(uint16_t *)chardata;
+        *(unsigned char *)(string->data + string->offset + 2) = chardata[2];
+        *(unsigned char *)(string->data + string->offset + 3) = chardata[3];
+        *(unsigned char *)(string->data + string->offset + 4) = chardata[4];
+        *(unsigned char *)(string->data + string->offset + 5) = chardata[5];
+        *(unsigned char *)(string->data + string->offset + 6) = chardata[6];
+        *(uint32_t *)(string->data + string->offset + 7) =
+            (*(uint32_t *)&(chardata[7]) & 0xffffff);
+        /* don't increment the offset through the extra byte we zeroed out,
+           so it can be used in the next thing dumped if this is a sequence */
+        string->offset += 10;
         return 0;
     }
 
@@ -965,6 +996,20 @@ load_one(offsetstring *string, char intern) {
         string->offset += 6;
         obj = PyDateTimeAPI->Time_FromTime(hour, minute, second, microsecond,
                 Py_None, PyDateTimeAPI->TimeType);
+        break;
+    case TYPE_DATETIME:
+        HAS_SPACE(string, 10);
+        year = ntohs(*(uint16_t *)(string->data + string->offset));
+        month = *(unsigned char *)(string->data + string->offset + 2);
+        day = *(unsigned char *)(string->data + string->offset + 3);
+        hour = *(unsigned char *)(string->data + string->offset + 4);
+        minute = *(unsigned char *)(string->data + string->offset + 5);
+        second = *(unsigned char *)(string->data + string->offset + 6);
+        microsecond = ntohl(
+                *(uint32_t *)(string->data + string->offset + 7) << 8);
+        obj = PyDateTimeAPI->DateTime_FromDateAndTime(year, month, day, hour,
+                minute, second, microsecond, Py_None,
+                PyDateTimeAPI->DateTimeType);
         break;
     default:
         PyErr_SetString(PyExc_ValueError, "invalid mummy (bad type)");

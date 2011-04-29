@@ -133,8 +133,9 @@ generate({
     'CharTuple': tuple(list(range(-128, 128))),
     #'HugeTuple': tuple(randrange(1 << 64, 1 << 3000) for i in range(30)),
 
-    'Date': datetime.date.today(),
-    'Time': datetime.datetime.now().time(),
+    'DateToday': datetime.date.today(),
+    'TimeNow': datetime.datetime.now().time(),
+    'DateTimeNow': datetime.datetime.now(),
 })
 
 

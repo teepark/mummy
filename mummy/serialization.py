@@ -81,6 +81,7 @@ TYPE_MEDUTF8 = 0x19
 
 TYPE_DATE = 0x1A
 TYPE_TIME = 0x1B
+TYPE_DATETIME = 0x1C
 
 
 TYPEMAP = {
@@ -157,6 +158,9 @@ def _get_type_code(x):
 
     if type(x) is datetime.time:
         return TYPE_TIME
+
+    if type(x) is datetime.datetime:
+        return TYPE_DATETIME
 
     raise ValueError("%r cannot be serialized" % type(x))
 
@@ -283,6 +287,9 @@ def _dump_time(x, depth=0, default=None):
         _dump_char(x.second),
         struct.pack("!I", x.microsecond)[-3:]))
 
+def _dump_datetime(x, depth=0, default=None):
+    return _dump_date(x.date()) + _dump_time(x.timetz())
+
 _dumpers = {
     TYPE_NONE: _dump_none,
     TYPE_BOOL: _dump_bool,
@@ -312,6 +319,7 @@ _dumpers = {
     TYPE_MEDDICT: _dump_meddict,
     TYPE_DATE: _dump_date,
     TYPE_TIME: _dump_time,
+    TYPE_DATETIME: _dump_datetime,
 }
 
 def pure_python_dumps(item, default=None, depth=0, compress=True):
@@ -509,6 +517,11 @@ def _load_time(x):
     microsecond = struct.unpack("!I", '\x00' + x[3:6])[0]
     return datetime.time(hour, minute, second, microsecond), 6
 
+def _load_datetime(x):
+    return datetime.datetime.combine(
+            _load_date(x)[0],
+            _load_time(x[4:10])[0]), 10
+
 
 _loaders = {
     TYPE_NONE: _load_none,
@@ -539,6 +552,7 @@ _loaders = {
     TYPE_MEDDICT: _load_meddict,
     TYPE_DATE: _load_date,
     TYPE_TIME: _load_time,
+    TYPE_DATETIME: _load_datetime,
 }
 
 def _loads(data):
