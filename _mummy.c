@@ -51,6 +51,10 @@
     #define PySet_MINSIZE 8
 #endif
 
+#if PY_MAJOR_VERSION == 2 && PY_MINOR_VERSION <= 5
+    #define Py_TYPE(ob) (((PyObject *)(ob))->ob_type)
+#endif
+
 
 /*
  * there are major C-API changes in python 3+
