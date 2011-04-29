@@ -136,6 +136,7 @@ generate({
     'DateToday': datetime.date.today(),
     'TimeNow': datetime.datetime.now().time(),
     'DateTimeNow': datetime.datetime.now(),
+    'TimeDelta': datetime.timedelta(3, 11, 12345),
 })
 
 

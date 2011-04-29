@@ -82,6 +82,7 @@ TYPE_MEDUTF8 = 0x19
 TYPE_DATE = 0x1A
 TYPE_TIME = 0x1B
 TYPE_DATETIME = 0x1C
+TYPE_TIMEDELTA = 0x1D
 
 
 TYPEMAP = {
@@ -161,6 +162,9 @@ def _get_type_code(x):
 
     if type(x) is datetime.datetime:
         return TYPE_DATETIME
+
+    if type(x) is datetime.timedelta:
+        return TYPE_TIMEDELTA
 
     raise ValueError("%r cannot be serialized" % type(x))
 
@@ -290,6 +294,10 @@ def _dump_time(x, depth=0, default=None):
 def _dump_datetime(x, depth=0, default=None):
     return _dump_date(x.date()) + _dump_time(x.timetz())
 
+def _dump_timedelta(x, depth=0, default=None):
+    return "".join((
+        _dump_int(x.days), _dump_int(x.seconds), _dump_int(x.microseconds)))
+
 _dumpers = {
     TYPE_NONE: _dump_none,
     TYPE_BOOL: _dump_bool,
@@ -320,6 +328,7 @@ _dumpers = {
     TYPE_DATE: _dump_date,
     TYPE_TIME: _dump_time,
     TYPE_DATETIME: _dump_datetime,
+    TYPE_TIMEDELTA: _dump_timedelta,
 }
 
 def pure_python_dumps(item, default=None, depth=0, compress=True):
@@ -522,6 +531,13 @@ def _load_datetime(x):
             _load_date(x)[0],
             _load_time(x[4:10])[0]), 10
 
+def _load_timedelta(x):
+    print _load_int(x)
+    print _load_int(x[4:8])
+    print _load_int(x[8:12])
+    return (datetime.timedelta(
+            _load_int(x)[0], _load_int(x[4:8])[0], _load_int(x[8:12])[0]), 12)
+
 
 _loaders = {
     TYPE_NONE: _load_none,
@@ -553,6 +569,7 @@ _loaders = {
     TYPE_DATE: _load_date,
     TYPE_TIME: _load_time,
     TYPE_DATETIME: _load_datetime,
+    TYPE_TIMEDELTA: _load_timedelta,
 }
 
 def _loads(data):

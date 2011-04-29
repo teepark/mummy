@@ -95,6 +95,7 @@
 #define TYPE_DATE 0x1A
 #define TYPE_TIME 0x1B
 #define TYPE_DATETIME 0x1C
+#define TYPE_TIMEDELTA 0x1D
 
 
 #define MAX_DEPTH 256
@@ -635,6 +636,22 @@ dump_one(PyObject *obj, offsetstring *string, PyObject *default_handler,
         string->offset += 10;
         return 0;
     }
+    if (Py_TYPE(obj) == PyDateTimeAPI->DeltaType) {
+        /*
+         * PyTimeDeltas have the type TYPE_TIMEDELTA followed by 3 signed ints
+         * for days, seconds, and microseconds
+         */
+        if ((rc = ensure_space(string, 13))) return rc;
+        string->data[string->offset++] = TYPE_TIMEDELTA;
+        *(int32_t *)(string->data + string->offset) =
+            htonl(((PyDateTime_Delta *)obj)->days);
+        *(int32_t *)(string->data + string->offset + 4) =
+            htonl(((PyDateTime_Delta *)obj)->seconds);
+        *(int32_t *)(string->data + string->offset + 8) =
+            htonl(((PyDateTime_Delta *)obj)->microseconds);
+        string->offset += 12;
+        return 0;
+    }
 
     if (default_handler != Py_None) {
         // give an obj reference to default_handler
@@ -1010,6 +1027,14 @@ load_one(offsetstring *string, char intern) {
         obj = PyDateTimeAPI->DateTime_FromDateAndTime(year, month, day, hour,
                 minute, second, microsecond, Py_None,
                 PyDateTimeAPI->DateTimeType);
+        break;
+    case TYPE_TIMEDELTA:
+        HAS_SPACE(string, 12);
+        hour = ntohl(*(int32_t *)(string->data + string->offset));
+        second = ntohl(*(int32_t *)(string->data + string->offset + 4));
+        microsecond = ntohl(*(int32_t *)(string->data + string->offset + 8));
+        obj = PyDateTimeAPI->Delta_FromDelta(hour, second, microsecond, 1,
+                PyDateTimeAPI->DeltaType);
         break;
     default:
         PyErr_SetString(PyExc_ValueError, "invalid mummy (bad type)");
