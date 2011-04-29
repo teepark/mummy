@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 
+import datetime
 try:
     import decimal
 except ImportError:
@@ -131,6 +132,9 @@ generate({
     'StringTuple': tuple(bytify(string.ascii_letters)),
     'CharTuple': tuple(list(range(-128, 128))),
     #'HugeTuple': tuple(randrange(1 << 64, 1 << 3000) for i in range(30)),
+
+    'Date': datetime.date.today(),
+    'Time': datetime.datetime.now().time(),
 })
 
 

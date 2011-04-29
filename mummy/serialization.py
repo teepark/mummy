@@ -1,3 +1,4 @@
+import datetime
 import itertools
 import struct
 import sys
@@ -78,6 +79,9 @@ TYPE_MEDDICT = 0x17
 TYPE_MEDSTR = 0x18
 TYPE_MEDUTF8 = 0x19
 
+TYPE_DATE = 0x1A
+TYPE_TIME = 0x1B
+
 
 TYPEMAP = {
     type(None): TYPE_NONE,
@@ -147,6 +151,12 @@ def _get_type_code(x):
         if -9223372036854775808 <= x < 9223372036854775808:
             return TYPE_LONG
         return TYPE_HUGE
+
+    if type(x) is datetime.date:
+        return TYPE_DATE
+
+    if type(x) is datetime.time:
+        return TYPE_TIME
 
     raise ValueError("%r cannot be serialized" % type(x))
 
@@ -260,6 +270,19 @@ def _dump_meddict(x, depth=0, default=None):
             pure_python_dumps(item, default, depth + 1, compress=0) for item in
             reduce(lambda a, b: a.extend(b) or a, iteritems(x), []))
 
+def _dump_date(x, depth=0, default=None):
+    return "".join(
+            (_dump_ushort(x.year), _dump_char(x.month), _dump_char(x.day)))
+
+def _dump_time(x, depth=0, default=None):
+    if x.tzinfo is not None:
+        raise ValueError("can't serialize data objects with tzinfo")
+    return "".join((
+        _dump_char(x.hour),
+        _dump_char(x.minute),
+        _dump_char(x.second),
+        struct.pack("!I", x.microsecond)[-3:]))
+
 _dumpers = {
     TYPE_NONE: _dump_none,
     TYPE_BOOL: _dump_bool,
@@ -287,6 +310,8 @@ _dumpers = {
     TYPE_MEDSET: _dump_medset,
     TYPE_SHORTDICT: _dump_shortdict,
     TYPE_MEDDICT: _dump_meddict,
+    TYPE_DATE: _dump_date,
+    TYPE_TIME: _dump_time,
 }
 
 def pure_python_dumps(item, default=None, depth=0, compress=True):
@@ -471,6 +496,19 @@ def _load_meddict(x):
         result[key] = value
     return result, width
 
+def _load_date(x):
+    year = struct.unpack("!H", x[:2])[0]
+    month = struct.unpack("B", x[2])[0]
+    day = struct.unpack("B", x[3])[0]
+    return datetime.date(year, month, day), 4
+
+def _load_time(x):
+    hour = struct.unpack("B", x[0])[0]
+    minute = struct.unpack("B", x[1])[0]
+    second = struct.unpack("B", x[2])[0]
+    microsecond = struct.unpack("!I", '\x00' + x[3:6])[0]
+    return datetime.time(hour, minute, second, microsecond), 6
+
 
 _loaders = {
     TYPE_NONE: _load_none,
@@ -499,6 +537,8 @@ _loaders = {
     TYPE_MEDSET: _load_medset,
     TYPE_SHORTDICT: _load_shortdict,
     TYPE_MEDDICT: _load_meddict,
+    TYPE_DATE: _load_date,
+    TYPE_TIME: _load_time,
 }
 
 def _loads(data):

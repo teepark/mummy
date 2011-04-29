@@ -1,4 +1,6 @@
 #include "Python.h"
+#include "datetime.h"
+
 #include <netinet/in.h>
 
 #include "lzf.h"
@@ -90,6 +92,9 @@
 #define TYPE_MEDSTR 0x18
 #define TYPE_MEDUTF8 0x19
 
+#define TYPE_DATE 0x1A
+#define TYPE_TIME 0x1B
+
 
 #define MAX_DEPTH 256
 #define INITIAL_BUFFER_SIZE 0x1000
@@ -134,6 +139,7 @@ dump_one(PyObject *obj, offsetstring *string, PyObject *default_handler,
     register long long ll;
     register size_t t;
     uint64_t ui;
+    unsigned char *chardata;
 
     Py_ssize_t pst;
     PyObject *iterator, *key, *value, *handler_args;
@@ -146,6 +152,11 @@ dump_one(PyObject *obj, offsetstring *string, PyObject *default_handler,
 
     if (default_handler != Py_None && !PyCallable_Check(default_handler)) {
         PyErr_SetString(PyExc_TypeError, "default must be callable or None");
+        return -1;
+    }
+
+    if (obj == NULL) {
+        PyErr_BadInternalCall();
         return -1;
     }
 
@@ -372,15 +383,13 @@ dump_one(PyObject *obj, offsetstring *string, PyObject *default_handler,
             rc = ensure_space(string, pst + 2);
             if (rc) return rc;
             string->data[string->offset++] = TYPE_SHORTUTF8;
-            *(uint8_t *)(string->data + string->offset) = (uint8_t)pst;
+            *(uint8_t *)(string->data + string->offset++) = (uint8_t)pst;
 #ifdef IS_PYTHON3
-            memcpy(string->data + string->offset + 1, PyBytes_AS_STRING(obj),
-                    pst);
+            memcpy(string->data + string->offset, PyBytes_AS_STRING(obj), pst);
 #else
-            memcpy(string->data + string->offset + 1, PyString_AS_STRING(obj),
-                    pst);
+            memcpy(string->data + string->offset, PyString_AS_STRING(obj), pst);
 #endif
-            string->offset += pst + 1;
+            string->offset += pst;
             Py_DECREF(obj);
             return 0;
         }
@@ -389,14 +398,13 @@ dump_one(PyObject *obj, offsetstring *string, PyObject *default_handler,
             if ((rc = ensure_space(string, pst + 3))) return rc;
             string->data[string->offset++] = TYPE_MEDUTF8;
             *(uint16_t *)(string->data + string->offset) = htons((uint16_t)pst);
+            string->offset += 2;
 #ifdef IS_PYTHON3
-            memcpy(string->data + string->offset + 2,
-                    PyBytes_AS_STRING(obj), pst);
+            memcpy(string->data + string->offset, PyBytes_AS_STRING(obj), pst);
 #else
-            memcpy(string->data + string->offset + 2,
-                    PyString_AS_STRING(obj), pst);
+            memcpy(string->data + string->offset, PyString_AS_STRING(obj), pst);
 #endif
-            string->offset += pst + 2;
+            string->offset += pst;
             Py_DECREF(obj);
             return 0;
         }
@@ -405,14 +413,13 @@ dump_one(PyObject *obj, offsetstring *string, PyObject *default_handler,
         if (rc) return rc;
         string->data[string->offset++] = TYPE_LONGUTF8;
         *(uint32_t *)(string->data + string->offset) = htonl((uint32_t)pst);
+        string->offset += 4;
 #ifdef IS_PYTHON3
-        memcpy(string->data + string->offset + 4, PyBytes_AS_STRING(obj),
-                pst);
+        memcpy(string->data + string->offset, PyBytes_AS_STRING(obj), pst);
 #else
-        memcpy(string->data + string->offset + 4, PyString_AS_STRING(obj),
-                pst);
+        memcpy(string->data + string->offset, PyString_AS_STRING(obj), pst);
 #endif
-        string->offset += pst + 4;
+        string->offset += pst;
         Py_DECREF(obj);
         return 0;
     }
@@ -557,6 +564,46 @@ dump_one(PyObject *obj, offsetstring *string, PyObject *default_handler,
         }
         return 0;
     }
+    if (Py_TYPE(obj) == PyDateTimeAPI->DateType) {
+        /*'
+         * PyDates just have the type TYPE_DATE then a
+         * short and 2 chars for year, month and day
+         */
+        if ((rc = ensure_space(string, 5))) return rc;
+        string->data[string->offset++] = TYPE_DATE;
+        chardata = ((PyDateTime_Date *)obj)->data;
+        *(uint16_t *)(string->data + string->offset) = *(uint16_t *)chardata;
+        *(unsigned char *)(string->data + string->offset + 2) = chardata[2];
+        *(unsigned char *)(string->data + string->offset + 3) = chardata[3];
+        string->offset += 4;
+        return 0;
+    }
+    if (Py_TYPE(obj) == PyDateTimeAPI->TimeType) {
+        /*
+         * PyTimes have the type TYPE_TIME, then 1, 1, 1 and 3 bytes
+         * for hour, minute, second and microsecond, respectively
+         */
+        /* ensure_space one more than we need, because we are going to set the
+           last 3-byte chunk using the 3 high bits of a uint32_t. so an extra
+           byte is going to be zeroed out.*/
+        if (((PyDateTime_Time *)obj)->hastzinfo) {
+            PyErr_SetString(PyExc_ValueError,
+                    "can't serialize date objects with tzinfo");
+            return -1;
+        }
+        if ((rc = ensure_space(string, 8))) return rc;
+        string->data[string->offset++] = TYPE_TIME;
+        chardata = ((PyDateTime_Time *)obj)->data;
+        *(unsigned char *)(string->data + string->offset) = *chardata;
+        *(unsigned char *)(string->data + string->offset + 1) = chardata[1];
+        *(unsigned char *)(string->data + string->offset + 2) = chardata[2];
+        *(uint32_t *)(string->data + string->offset + 3) =
+            (*(uint32_t *)&(chardata[3]) & 0xffffff);
+        /* don't increment the offset through the extra byte we zeroed out,
+           so it can be used in the next thing dumped if this is a sequence */
+        string->offset += 6;
+        return 0;
+    }
 
     if (default_handler != Py_None) {
         // give an obj reference to default_handler
@@ -564,11 +611,11 @@ dump_one(PyObject *obj, offsetstring *string, PyObject *default_handler,
         handler_args = PyTuple_New(1);
         PyTuple_SET_ITEM(handler_args, 0, obj);
         if (!(obj = PyObject_Call(default_handler, handler_args, NULL)))
-            return NULL;
+            return -1;
         // don't increment depth, but don't pass on default_handler either
-        value = dump_one(obj, string, Py_None, depth);
+        rc = dump_one(obj, string, Py_None, depth);
         Py_DECREF(handler_args);
-        return value;
+        return rc;
     }
 
     PyErr_SetString(PyExc_TypeError, "unserializable type");
@@ -581,6 +628,8 @@ load_one(offsetstring *string, char intern) {
     unsigned int i;
     register uint32_t size;
     uint64_t ll;
+    int year, month, day, hour, minute, second;
+        unsigned int microsecond;
     PyObject *obj = NULL,
              *key,
              *value;
@@ -897,6 +946,26 @@ load_one(offsetstring *string, char intern) {
             size--;
         }
         break;
+    case TYPE_DATE:
+        HAS_SPACE(string, 4);
+        year = ntohs(*(uint16_t *)(string->data + string->offset));
+        month = *(unsigned char *)(string->data + string->offset + 2);
+        day = *(unsigned char *)(string->data + string->offset + 3);
+        string->offset += 4;
+        obj = PyDateTimeAPI->Date_FromDate(
+                year, month, day, PyDateTimeAPI->DateType);
+        break;
+    case TYPE_TIME:
+        HAS_SPACE(string, 6);
+        hour = *(unsigned char *)(string->data + string->offset);
+        minute = *(unsigned char *)(string->data + string->offset + 1);
+        second = *(unsigned char *)(string->data + string->offset + 2);
+        microsecond = ntohl(
+                *(uint32_t *)(string->data + string->offset + 3) << 8);
+        string->offset += 6;
+        obj = PyDateTimeAPI->Time_FromTime(hour, minute, second, microsecond,
+                Py_None, PyDateTimeAPI->TimeType);
+        break;
     default:
         PyErr_SetString(PyExc_ValueError, "invalid mummy (bad type)");
     }
@@ -1064,11 +1133,13 @@ static struct PyModuleDef _mummymodule = {
 PyMODINIT_FUNC
 PyInit__mummy(void) {
     PyObject *module = PyModule_Create(&_mummymodule);
+    PyDateTime_IMPORT;
     return module;
 }
 #else
 PyMODINIT_FUNC
 init_mummy(void) {
     Py_InitModule("_mummy", methods);
+    PyDateTime_IMPORT;
 }
 #endif
