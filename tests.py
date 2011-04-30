@@ -1,10 +1,7 @@
 #!/usr/bin/env python
 
 import datetime
-try:
-    import decimal
-except ImportError:
-    decimal = None
+import decimal
 try:
     import fractions
 except ImportError:
@@ -34,6 +31,12 @@ else:
 
 
 class BasicMummyTests(unittest.TestCase):
+    def assertEqual(self, a, b):
+        if isinstance(a, decimal.Decimal) and a.is_nan():
+            self.assert_(isinstance(b, decimal.Decimal) and b.is_nan(), (a, b))
+        else:
+            super(BasicMummyTests, self).assertEqual(a, b)
+
     def encoding_reference(self, val, default=None):
         c = mummy.dumps(val, default)
         py = mummy.pure_python_dumps(val, default)
@@ -52,7 +55,12 @@ class BasicMummyTests(unittest.TestCase):
     def pure_python_roundtrip(self, val, default=None):
         encoded = mummy.pure_python_dumps(val, default)
         finished = mummy.pure_python_loads(encoded)
-        self.assertEqual(val, finished)
+
+        if isinstance(val, decimal.Decimal) and val.is_nan():
+            self.assert_(isinstance(finished, decimal.Decimal) and
+                    finished.is_nan(), finished)
+        else:
+            self.assertEqual(val, finished)
 
 
 def _make_test(name, target):
@@ -137,6 +145,15 @@ generate({
     'TimeNow': datetime.datetime.now().time(),
     'DateTimeNow': datetime.datetime.now(),
     'TimeDelta': datetime.timedelta(3, 11, 12345),
+
+    'DecimalNaN': decimal.Decimal('NaN'),
+    'DecimalSNaN': decimal.Decimal('sNaN'),
+    'DecimalInfinity': decimal.Decimal('Infinity'),
+    'DecimalNegInfinity': decimal.Decimal('-Infinity'),
+    'DecimalPositiveOdd': decimal.Decimal('106.1984'),
+    'DecimalNegaviteOdd': decimal.Decimal('-106.1984'),
+    'DecimalPositiveEven': decimal.Decimal('1106.1984'),
+    'DecimalNegativeEven': decimal.Decimal('-1106.1984'),
 })
 
 
@@ -169,21 +186,6 @@ class RecursionDepthTest(unittest.TestCase):
 
 
 class DefaultFormatterTest(BasicMummyTests):
-    if decimal:
-        def decimal_formatter(self, d):
-            if isinstance(d, decimal.Decimal):
-                exp = 0
-                while d != d.to_integral():
-                    exp += 1
-                    d *= 10
-                return ()
-
-        def test_decimals(self):
-            d = decimal.Decimal((1, (1,2,3,4,5), -3))
-            f = self.decimal_formatter
-            self.encoding_reference(d, f)
-            self.decoding_reference(mummy.dumps(d, f))
-
     if fractions:
         def fraction_formatter(self, f):
             if isinstance(f, fractions.Fraction):

@@ -1,4 +1,5 @@
 import datetime
+import decimal
 import itertools
 import struct
 import sys
@@ -83,14 +84,13 @@ TYPE_DATE = 0x1A
 TYPE_TIME = 0x1B
 TYPE_DATETIME = 0x1C
 TYPE_TIMEDELTA = 0x1D
+TYPE_DECIMAL = 0x1E
 
 
 TYPEMAP = {
     type(None): TYPE_NONE,
     bool: TYPE_BOOL,
-    # skipping the integer types here
     float: TYPE_DOUBLE,
-    # skipping strings, unicodes, list, tuples, sets and dicts
 }
 
 _BIG_ENDIAN = struct.pack("!h", 1) == struct.pack("h", 1)
@@ -165,6 +165,9 @@ def _get_type_code(x):
 
     if type(x) is datetime.timedelta:
         return TYPE_TIMEDELTA
+
+    if type(x) is decimal.Decimal:
+        return TYPE_DECIMAL
 
     raise ValueError("%r cannot be serialized" % type(x))
 
@@ -298,6 +301,35 @@ def _dump_timedelta(x, depth=0, default=None):
     return "".join((
         _dump_int(x.days), _dump_int(x.seconds), _dump_int(x.microseconds)))
 
+def _dump_decimal(x, depth=0, default=None):
+    sign, digits, expo = x.as_tuple()
+    flags = 0
+
+    flags |= expo in ("n", "N", "F")
+    flags |= sign << 1
+    if flags & 1:
+        if expo == "F":
+            flags |= 4
+        else:
+            flags |= (expo == "N") << 3
+
+        return _dump_char(flags)
+
+    digitpairs = []
+    for i, dig in enumerate(digits):
+        if not 0 <= dig <= 9:
+            raise ValueError("invalid digit")
+
+        if not (i & 1):
+            digitpairs.append(0)
+            dig <<= 4
+
+        digitpairs[-1] |= dig
+
+    return (struct.pack("!BhH", flags, expo, len(digits)) +
+            "".join(map(chr, digitpairs)))
+
+
 _dumpers = {
     TYPE_NONE: _dump_none,
     TYPE_BOOL: _dump_bool,
@@ -329,6 +361,7 @@ _dumpers = {
     TYPE_TIME: _dump_time,
     TYPE_DATETIME: _dump_datetime,
     TYPE_TIMEDELTA: _dump_timedelta,
+    TYPE_DECIMAL: _dump_decimal,
 }
 
 def pure_python_dumps(item, default=None, depth=0, compress=True):
@@ -535,6 +568,35 @@ def _load_timedelta(x):
     return (datetime.timedelta(
             _load_int(x)[0], _load_int(x[4:8])[0], _load_int(x[8:12])[0]), 12)
 
+def _load_decimal(x):
+    flags = struct.unpack("B", x[0])[0]
+
+    if flags & 1:
+        width = 1
+        if flags & 4:
+            # (+ or -) Infinity
+            triple = ((flags & 2) >> 1, (0,), "F")
+        else:
+            # [s]NaN
+            triple = (0, (), flags & 8 and "N" or "n")
+    else:
+        sign = (flags & 2) >> 1
+        exponent, length = struct.unpack("!hH", x[1:5])
+        width = 5 + (length // 2) + (length & 1)
+
+        digitbytes = map(ord, x[5:width])
+        digits = []
+        for i, b in enumerate(digitbytes):
+            digits.append((b & 0xf0) >> 4)
+            digits.append(b & 0xf)
+
+        if not digits[-1]:
+            digits.pop()
+
+        triple = (sign, digits, exponent)
+
+    return decimal.Decimal(triple), width
+
 
 _loaders = {
     TYPE_NONE: _load_none,
@@ -567,6 +629,7 @@ _loaders = {
     TYPE_TIME: _load_time,
     TYPE_DATETIME: _load_datetime,
     TYPE_TIMEDELTA: _load_timedelta,
+    TYPE_DECIMAL: _load_decimal,
 }
 
 def _loads(data):

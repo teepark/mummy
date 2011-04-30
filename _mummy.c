@@ -101,6 +101,8 @@
 #define TYPE_DATETIME 0x1C
 #define TYPE_TIMEDELTA 0x1D
 
+#define TYPE_DECIMAL 0x1E
+
 
 #define MAX_DEPTH 256
 #define INITIAL_BUFFER_SIZE 0x1000
@@ -134,21 +136,25 @@ ensure_space(offsetstring *string, long length) {
 #define BREAKOUT(obj) { Py_DECREF(obj); obj = NULL; break; }
 
 
+/* import decimal at mummy import time, set this to decimal.Decimal */
+static PyObject *PyDecimalType;
+
+
 static int
 dump_one(PyObject *obj, offsetstring *string, PyObject *default_handler,
         int depth) {
     register int rc;
     int i;
-#ifndef IS_PYTHON3
     register long l;
-#endif
     register long long ll;
     register size_t t;
     uint64_t ui;
     unsigned char *chardata;
+    char *position;
+    register unsigned char flags;
 
     Py_ssize_t pst;
-    PyObject *iterator, *key, *value, *handler_args;
+    PyObject *iterator, *key, *value, *args, *item;
 
     if (depth > MAX_DEPTH) {
         PyErr_SetString(
@@ -530,7 +536,7 @@ dump_one(PyObject *obj, offsetstring *string, PyObject *default_handler,
             if (rc) break;
         }
         Py_XDECREF(iterator);
-        if (rc) return -1;
+        if (rc || PyErr_Occurred()) return -1;
         return 0;
     }
     if (PyDict_CheckExact(obj)) {
@@ -656,17 +662,219 @@ dump_one(PyObject *obj, offsetstring *string, PyObject *default_handler,
         string->offset += 12;
         return 0;
     }
+    if (Py_TYPE(obj) == (PyTypeObject *)PyDecimalType) {
+        /*
+         * PyDecimals have the type TYPE_DECIMAL and the structure:
+         *  - a flags byte
+         *    - the lowest bit is "is_special" (NaN, sNaN, Infinity, -Infinity)
+         *      (if this is set then the flags byte is the only byte)
+         *    - the second lowest bit is "sign" (0 is positive)
+         *    - if the "is_special" bit was set, the next lowest bit is 0 for
+         *      NaN, 1 for Infinity
+         *    - if is_special and it's a NaN, the next lowest bit is 0 for NaN,
+         *      1 for sNaN (for infinity the sign was in the "sign" bit)
+         *  - a signed 2 byte number of the position of the decimal place
+         *  - an unsigned 2 byte number of the number of following digits
+         *  - unsigned chars each with two numbers 0<=x<=9 in 4-bit sections
+         */
+        if ((rc = ensure_space(string, 2))) return rc;
+        string->data[string->offset++] = TYPE_DECIMAL;
+
+        if (!(args = PyObject_CallMethod(obj, "as_tuple", NULL))) return -1;
+        flags = 0;
+
+        /*
+         * handle exponent first, since that's where "is_special" info lives
+         */
+        if (!(key = PyInt_FromLong(2))) {
+            Py_DECREF(args);
+            return -1;
+        }
+        if (!(value = PyObject_GetItem(args, key))) {
+            Py_DECREF(args);
+            Py_DECREF(key);
+            return -1;
+        }
+        Py_DECREF(key);
+
+        if (PyUnicode_CheckExact(value)) {
+            key = PyUnicode_AsEncodedString(value, "ascii", "strict");
+            Py_DECREF(value);
+            value = key;
+        }
+        if (PyString_CheckExact(value)) {
+            flags |= 1;
+            switch(PyString_AS_STRING(value)[0]) {
+            case 'n':
+                break;
+            case 'N':
+                flags |= 8;
+                break;
+            case 'F':
+                flags |= 4;
+                break;
+            default:
+                PyErr_Format(PyExc_ValueError,"unrecognized exponent: %c",
+                        PyString_AS_STRING(value)[0]);
+                Py_DECREF(args);
+                Py_DECREF(value);
+                return -1;
+            }
+        }
+        else if (PyInt_CheckExact(value) || PyLong_CheckExact(value)) {
+            if ((rc = ensure_space(string, 5))) {
+                Py_DECREF(args);
+                Py_DECREF(value);
+                return rc;
+            }
+
+            if (PyInt_CheckExact(value)) l = PyInt_AsLong(value);
+            else l = PyLong_AsLongLong(value);
+
+            if (l < -32768 || l >= 32768) {
+                PyErr_Format(PyExc_ValueError,
+                        "decimal exponent position too big: %ld", l);
+                Py_DECREF(args);
+                Py_DECREF(value);
+                return -1;
+            }
+
+            /* jump ahead and write the exponent position bytes */
+            *(int16_t *)(string->data + string->offset + 1) = htons((int16_t)l);
+        }
+        else {
+            Py_DECREF(args);
+            Py_DECREF(value);
+            PyErr_SetString(PyExc_TypeError, "unrecognized exponent type");
+            return -1;
+        }
+        Py_DECREF(value);
+
+        /*
+         * handle the sign
+         */
+        if (!(key = PyInt_FromLong(0))) {
+            Py_DECREF(args);
+            return -1;
+        }
+        if (!(value = PyObject_GetItem(args, key))) {
+            Py_DECREF(args);
+            Py_DECREF(key);
+            return -1;
+        }
+        Py_DECREF(key);
+
+        if (!(PyInt_CheckExact(value) || PyLong_CheckExact(value))) {
+            Py_DECREF(args);
+            Py_DECREF(value);
+            PyErr_SetString(PyExc_TypeError, "unrecognized sign type");
+            return -1;
+        }
+        l = (PyInt_CheckExact(value) ? PyInt_AsLong : PyLong_AsLong)(value);
+        if (l < 0 || l > 1) {
+            Py_DECREF(args);
+            Py_DECREF(value);
+            PyErr_SetString(PyExc_ValueError, "sign must be 0 or 1");
+            return -1;
+        }
+
+        flags |= l ? 2 : 0;
+
+        /* done writing flags now. we're also done writing
+           the exponent position, so jump ahead */
+        string->data[string->offset] = flags;
+        if (flags & 1) string->offset++;
+        else string->offset += 3;
+
+        /* if "is_special", we are done now */
+        if (flags & 1) {
+            Py_DECREF(args);
+            Py_DECREF(value);
+            return 0;
+        }
+        Py_DECREF(value);
+
+        /*
+         * handle the digits with a PyLong
+         */
+        if (!(key = PyInt_FromLong(1))) {
+            Py_DECREF(args);
+            return -1;
+        }
+        if (!(value = PyObject_GetItem(args, key))) {
+            Py_DECREF(args);
+            Py_DECREF(key);
+            return -1;
+        }
+        Py_DECREF(key);
+        Py_DECREF(args);
+
+        if (!(iterator = PyObject_GetIter(value))) {
+            Py_DECREF(value);
+            return -1;
+        }
+        Py_DECREF(value);
+
+        /* we need to write through the digit bytes, so save the position at
+           which we are going to write the number of them and jump forward */
+        position = string->data + string->offset;
+        string->offset += 2;
+
+        i = 0; /* i is used as the toggle for low/high bytes */
+        ll = 0; /* ll will be the number of bytes */
+        while ((item = PyIter_Next(iterator))) {
+            if (!(PyInt_CheckExact(item) || PyLong_CheckExact(item))) {
+                PyErr_SetString(PyExc_TypeError, "invalid digit type");
+                Py_DECREF(iterator);
+                Py_DECREF(item);
+                return -1;
+            }
+
+            l = (PyInt_CheckExact(item) ? PyInt_AsLong : PyLong_AsLong)(item);
+            if (l < 0 || l > 9) {
+                PyErr_SetString(
+                        PyExc_ValueError, "digits must be 0 <= digit <= 9");
+                Py_DECREF(iterator);
+                Py_DECREF(item);
+                return -1;
+            }
+
+            if ((i = !i)) {
+                if ((rc = ensure_space(string, 1))) {
+                    Py_DECREF(iterator);
+                    Py_DECREF(item);
+                    return -1;
+                }
+                string->data[string->offset] = (char)(l << 4);
+            } else
+                string->data[string->offset++] |= (char)l;
+
+            Py_DECREF(item);
+            ++ll;
+        }
+        if (i) string->offset++;
+        Py_DECREF(iterator);
+
+        if (PyErr_Occurred()) {
+            return -1;
+        }
+
+        /* now that we have the byte count, place it where it goes */
+        *(uint16_t *)(position) = htons((uint16_t)ll);
+
+        return 0;
+    }
 
     if (default_handler != Py_None) {
         // give an obj reference to default_handler
         Py_INCREF(obj);
-        handler_args = PyTuple_New(1);
-        PyTuple_SET_ITEM(handler_args, 0, obj);
-        if (!(obj = PyObject_Call(default_handler, handler_args, NULL)))
+        args = PyTuple_New(1);
+        PyTuple_SET_ITEM(args, 0, obj);
+        if (!(obj = PyObject_Call(default_handler, args, NULL)))
             return -1;
         // don't increment depth, but don't pass on default_handler either
         rc = dump_one(obj, string, Py_None, depth);
-        Py_DECREF(handler_args);
+        Py_DECREF(args);
         return rc;
     }
 
@@ -681,10 +889,13 @@ load_one(offsetstring *string, char intern) {
     register uint32_t size;
     uint64_t ll;
     int year, month, day, hour, minute, second;
-        unsigned int microsecond;
+    unsigned int microsecond;
+    short s;
     PyObject *obj = NULL,
              *key,
-             *value;
+             *value,
+             *args,
+             *digits = NULL;
 
     if (!(string->length - string->offset)) {
         PyErr_SetString(PyExc_ValueError, "no data from which to load");
@@ -1040,6 +1251,63 @@ load_one(offsetstring *string, char intern) {
         obj = PyDateTimeAPI->Delta_FromDelta(hour, second, microsecond, 1,
                 PyDateTimeAPI->DeltaType);
         break;
+    case TYPE_DECIMAL:
+        HAS_SPACE(string, 1);
+        if (string->data[string->offset] & 1) { /* "is_special" */
+            value = PyTuple_New(3);
+            if (string->data[string->offset] & 4) {
+                /* (+ or -) Infinity */
+                PyTuple_SET_ITEM(value, 2, PyString_FromString("F"));
+                PyTuple_SET_ITEM(value, 1, PyTuple_New(1));
+                PyTuple_SET_ITEM(PyTuple_GET_ITEM(value, 1), 0,
+                        PyInt_FromLong(0));
+                PyTuple_SET_ITEM(value, 0,
+                    PyInt_FromLong((string->data[string->offset] & 2) >> 1));
+            } else {
+                /* sNaN or NaN */
+                PyTuple_SET_ITEM(value, 2, PyString_FromString(
+                            (string->data[string->offset] & 8) ? "N" : "n"));
+                PyTuple_SET_ITEM(value, 1, PyTuple_New(0));
+                PyTuple_SET_ITEM(value, 0, PyInt_FromLong(0));
+            }
+        }
+        else {
+            value = PyTuple_New(3);
+
+            /* read the sign bit and set it */
+            PyTuple_SET_ITEM(value, 0,
+                    PyInt_FromLong((string->data[string->offset++] & 2) >> 1));
+
+            HAS_SPACE(string, 4);
+
+            /* set the exponent position */
+            s = ntohs(*(int16_t *)(string->data + string->offset));
+            PyTuple_SET_ITEM(value, 2, PyInt_FromLong((long)s));
+            string->offset += 2;
+
+            /* figure out the size of the "digits" tuple */
+            size = ntohs(*(uint16_t *)(string->data + string->offset));
+            string->offset += 2;
+
+            HAS_SPACE(string, (size >> 1) + (size & 1));
+
+            /* create, populate and set the digits tuple */
+            digits = PyTuple_New(size);
+            for (i = 0; i < size; ++i)
+                PyTuple_SET_ITEM(digits, i, PyInt_FromLong(
+                        (string->data[string->offset + (i >> 1)] &
+                         (i & 1 ? 0xf : 0xf0)) >> (i & 1 ? 0 : 4)));
+            PyTuple_SET_ITEM(value, 1, digits);
+        }
+
+        args = PyTuple_New(1);
+        PyTuple_SET_ITEM(args, 0, value);
+
+        obj = PyObject_Call(PyDecimalType, args, NULL);
+
+        Py_DECREF(args);
+        Py_XDECREF(digits);
+        break;
     default:
         PyErr_SetString(PyExc_ValueError, "invalid mummy (bad type)");
     }
@@ -1206,14 +1474,30 @@ static struct PyModuleDef _mummymodule = {
 
 PyMODINIT_FUNC
 PyInit__mummy(void) {
-    PyObject *module = PyModule_Create(&_mummymodule);
+    PyObject *mummy_module, *decimal_module;
+
+    mummy_module = PyModule_Create(&_mummymodule);
+
     PyDateTime_IMPORT;
+
+    decimal_module = PyImport_ImportModule("decimal");
+    PyDecimalType = PyObject_GetAttrString(decimal_module, "Decimal");
+    Py_INCREF(PyDecimalType);
+
     return module;
 }
 #else
 PyMODINIT_FUNC
 init_mummy(void) {
+    PyObject *decimal_module;
+
     Py_InitModule("_mummy", methods);
+
+    decimal_module = PyImport_ImportModule("decimal");
+    PyDecimalType = PyObject_GetAttrString(decimal_module, "Decimal");
+    Py_INCREF(PyDecimalType);
+    Py_DECREF(decimal_module);
+
     PyDateTime_IMPORT;
 }
 #endif
