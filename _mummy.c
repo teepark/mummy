@@ -1239,6 +1239,7 @@ load_one(offsetstring *string, char intern) {
         second = *(unsigned char *)(string->data + string->offset + 6);
         microsecond = ntohl(
                 *(uint32_t *)(string->data + string->offset + 7) << 8);
+        string->offset += 10;
         obj = PyDateTimeAPI->DateTime_FromDateAndTime(year, month, day, hour,
                 minute, second, microsecond, Py_None,
                 PyDateTimeAPI->DateTimeType);

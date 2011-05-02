@@ -82,6 +82,8 @@ contenders.append(('cPickle (protocol 0)', (cPickle.dumps, cPickle.loads)))
 if simplejson:
     contenders.append(('simplejson', (simplejson.dumps, simplejson.loads)))
 contenders.append(('repr/eval', (repr, eval)))
+contenders.append(('mummy pure-python',
+	(mummy.pure_python_dumps, mummy.pure_python_loads)))
 
 if __name__ == '__main__':
     tmpl = string.Template(
