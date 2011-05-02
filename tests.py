@@ -145,6 +145,7 @@ generate({
     'TimeNow': datetime.datetime.now().time(),
     'DateTimeNow': datetime.datetime.now(),
     'TimeDelta': datetime.timedelta(3, 11, 12345),
+    'DateTimeWithSomethingAfterIt': [datetime.datetime.now(), 17],
 
     'DecimalNaN': decimal.Decimal('NaN'),
     'DecimalSNaN': decimal.Decimal('sNaN'),
