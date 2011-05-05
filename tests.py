@@ -187,6 +187,16 @@ class RecursionDepthTest(unittest.TestCase):
 
 
 class DefaultFormatterTest(BasicMummyTests):
+    def object_formatter(self, o):
+        if type(o) is object:
+            return ('unhandled type', 'object')
+        raise TypeError("unserializable")
+
+    def test_objects(self):
+        o = object()
+        self.encoding_reference(o, self.object_formatter)
+        self.decoding_reference(mummy.dumps(o, self.object_formatter))
+
     if fractions:
         def fraction_formatter(self, f):
             if isinstance(f, fractions.Fraction):
