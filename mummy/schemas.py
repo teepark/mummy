@@ -31,8 +31,8 @@ tuple schemas:
 list schemas:
     - assert that the validated object is itself a list
     - only homogeneous lists may be validated, so the schema list must be of
-      length 0 or 1 (although "homogeneous" is in terms of the sub-schema,
-      which may actually be a UNION)
+      length 0 or 1 (although "homogeneous" is in terms of the sub-schemata,
+      which may actually be UNIONs)
     - if the schema list is empty it will only match an empty list
     - the item in the list schema is a schema which is used to match all the
       contents of the validated list
@@ -68,6 +68,11 @@ ANY schemas:
     - ANY is a singleton that can be used as a schema simply to consider
       anything as valid
 
+RULE schemas:
+    - the RULE constructor accepts a function as an argument; the function
+      should take one argument and return a boolean. the schema requires that
+      the function, when called on the matched message, returns True
+
 
 A schema definition can be any of the above schema types and any allowed
 sub-schemas.
@@ -91,9 +96,9 @@ sub-schemas.
 ... }]
 
 
-The API for schemas is just 4 names: OPTIONAL, UNION, ANY, and Message.
-The first 3 were explained above. Message is a base class you can use to create
-message classes, just give them a SCHEMA attribute of a valid schema and they
+The API for schemas is just 5 names: OPTIONAL, UNION, ANY, RULE, and Message.
+The first 4 were explained above. Message is a base class you can use to create
+message classes; just give them a SCHEMA attribute of a valid schema and they
 can be used to validate, shorten, and serialize their instances.
 
 >>> import mummy
@@ -226,6 +231,14 @@ class ANY(object):
         return "<ANY>"
 ANY = ANY()
 
+class RULE(object):
+    "require that a message passes a given boolean predicate"
+    def __init__(self, pred):
+        self.pred = pred
+
+    def __repr__(self):
+        return "<RULE (%r)>" % self.pred
+
 
 ##
 ## Validation
@@ -346,6 +359,11 @@ def _validate_union(schema, message):
 def _validate_any(schema, message):
     return True, None
 
+def _validate_rule(schema, message):
+    if schema.pred(message):
+        return True, None
+    return False, (message, schema)
+
 _validators = {
     bool: _validate_simple_instance,
     int: _validate_simple_instance,
@@ -358,6 +376,7 @@ _validators = {
     dict: _validate_dict,
     UNION: _validate_union,
     type(ANY): _validate_any,
+    RULE: _validate_rule,
 }
 
 def _validate(schema, message):
@@ -428,6 +447,11 @@ def _validate_union_schema(schema):
 def _validate_any_schema(schema):
     return True, None
 
+def _validate_rule_schema(schema):
+    if callable(getattr(schema, "pred", None)):
+        return True, None
+    return False, schema
+
 _schema_validators = {
     bool: _validate_simple_instance_schema,
     int: _validate_simple_instance_schema,
@@ -440,6 +464,7 @@ _schema_validators = {
     dict: _validate_dict_schema,
     UNION: _validate_union_schema,
     type(ANY): _validate_any_schema,
+    RULE: _validate_rule_schema,
 }
 
 def _validate_schema(schema):
