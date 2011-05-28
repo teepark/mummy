@@ -81,14 +81,14 @@ sub-schemas.
 ...     'first_name': str,
 ...     'last_name': str,
 ...     'is_male': bool,
-...     'birthday': int, #unix timestamp
+...     'birthday': datetime.date,
 ...     'address': {
 ...         'street_name': str,
 ...         'street_number': int,
-...         OPTIONAL('sub_number'): str, #apt number or similar (the B in 345B)
+...         OPTIONAL('sub_number'): str, # apt # or similar (eg the B in 345B)
 ...         'zip_code': int,
 ...         'city': str,
-...         OPTIONAL('state'): str, #optional for countries without states
+...         OPTIONAL('state'): str, # optional for countries without states
 ...         'country': str,
 ...     },
 ...     'hobbies': [OPTIONAL(str)],
@@ -106,27 +106,27 @@ can be used to validate, shorten, and serialize their instances.
 ...     SCHEMA = address_book_schema
 ...
 
->>> abm = AddressBookMessage([{
-...     'first_name': 'Travis',
-...     'last_name': 'Parker',
-...     'is_male': True,
-...     'birthday': 442224000,
-...     'address': {
-...         'street_number': 11,
-...         'zip_code': 12345,
-...         'street_name': 'None',
-...         'city': 'Of',
-...         'state': 'Your',
-...         'country': 'Business',
-...     },
-...     'hobbies': [],
-...     'properties': None,
-... }])
+abm = AddressBookMessage([{
+    'first_name': 'Travis',
+    'last_name': 'Parker',
+    'is_male': True,
+    'birthday': datetime.date(1984, 1, 6),
+    'address': {
+        'street_number': 11,
+        'zip_code': 12345,
+        'street_name': 'None',
+        'city': 'Of',
+        'state': 'Your',
+        'country': 'Business',
+    },
+    'hobbies': [],
+    'properties': None,
+}])
 
 >>> abm.validate()
 
 >>> abm.message
-[{'first_name': 'Travis', 'last_name': 'Parker', 'is_male': True, 'hobbies': [], 'birthday': 442224000, 'address': {'city': 'Of', 'street_number': 11, 'country': 'Business', 'street_name': 'None', 'state': 'Your', 'zip_code': 12345}, 'properties': None}]
+[{'first_name': 'Travis', 'last_name': 'Parker', 'is_male': True, 'hobbies': [], 'birthday': datetime.date(1984, 1, 6), 'address': {'city': 'Of', 'street_number': 11, 'country': 'Business', 'street_name': 'None', 'state': 'Your', 'zip_code': 12345}, 'properties': None}]
 
 
 Instances of the message class are able to shorten the serialized data by
@@ -134,7 +134,7 @@ removing information that is already present in the schema itself, and the
 message class itself is able to undo that transformation.
 
 >>> abm.transform()
-[[['Of', 'Business', 'None', 11, 12345, 'Your', None], 442224000, 'Travis', [], True, 'Parker', None]]
+[[['Of', 'Business', 'None', 11, 12345, 'Your', None], datetime.date(1984, 1, 6), 'Travis', [], True, 'Parker', None]]
 >>> AddressBookMessage.untransform(abm.transform()) == abm.message
 True
 
@@ -146,7 +146,7 @@ message receiver has the schema as well, no information is lost.
 >>> len(abm.dumps())
 64
 >>> len(mummy.dumps(abm.message))
-190
+195
 >>> AddressBookMessage.loads(abm.dumps()).message == abm.message
 True
 
@@ -154,6 +154,8 @@ True
 
 from __future__ import absolute_import
 
+import datetime
+import decimal
 import itertools
 import sys
 
@@ -187,20 +189,28 @@ else:
         return d.itervalues()
 
 
-_primitives = (bool, int, float, str)
+_primitives = (
+        bool, int, float, str,
+        datetime.date, datetime.time, datetime.datetime, datetime.timedelta,
+        decimal.Decimal)
 _type_validations = {
     bool: bool,
     int: (int, long),
     float: float,
     str: str,
+    datetime.date: datetime.date,
+    datetime.time: datetime.time,
+    datetime.datetime: datetime.datetime,
+    datetime.timedelta: datetime.timedelta,
+    decimal.Decimal: decimal.Decimal,
 }
 
 class OPTIONAL(object):
     """specifies that a piece of a schema is optional in some specific contexts
 
-    as a dictionary key, allows that key to be left out
-    as a member of a tuple schema, allows the message tuple item to be left out
-    as the only member of a list schema, allows the message list to be empty
+    - as a dictionary key, allows that key to be left out
+    - as a member of a tuple schema, allows the message tuple to be left out
+    - as the only member of a list schema, allows the message list to be empty
     """
     def __init__(self, schema):
         self.schema = schema
