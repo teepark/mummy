@@ -116,7 +116,7 @@ def _get_type_code(x):
             return TYPE_MEDTUPLE
         return TYPE_TUPLE
 
-    if type(x) is set:
+    if type(x) in (set, frozenset):
         if len(x) < 256:
             return TYPE_SHORTSET
         if len(x) < 65536:
