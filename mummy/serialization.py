@@ -374,6 +374,8 @@ def pure_python_dumps(item, default=None, depth=0, compress=True):
     try:
         kind = _get_type_code(item)
     except ValueError:
+        if default is None:
+            raise TypeError("unserializable type")
         item = default(item)
         kind = _get_type_code(item)
     data = _dumpers[kind](item, depth, default)
