@@ -1,5 +1,7 @@
 import errno
 import os
+import sys
+
 from setuptools import Extension
 
 from paver.easy import *
@@ -7,19 +9,23 @@ from paver.path import path
 from paver.setuputils import setup
 
 
-setup(
+info = dict(
     name="mummy",
     description="fast, efficient serialization",
     packages=["mummy"],
     version="0.1",
     author="Travis Parker",
     author_email="travis.parker@gmail.com",
-    ext_modules=[Extension(
+)
+
+if sys.subversion[0].lower() != 'pypy':
+    info['ext_modules'] = [Extension(
         '_mummy',
         ['_mummy.c', 'lzf/lzf_c.c', 'lzf/lzf_d.c'],
         include_dirs=('.', './lzf'),
-        extra_compile_args=['-Wall'])],
-)
+        extra_compile_args=['-Wall'])]
+
+setup(**info)
 
 MANIFEST = (
     "setup.py",
