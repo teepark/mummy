@@ -1,9 +1,6 @@
 *.pyc
-.*.swp
-build/*
-dist/*
-*.egg-info/*
-venv/*
-MANIFEST.in
-
-objgraph.py
+.*.sw[po]
+python/build/*
+python/dist/*
+python/*.egg-info/*
+python/MANIFEST.in

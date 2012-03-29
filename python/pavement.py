@@ -21,8 +21,10 @@ info = dict(
 if sys.subversion[0].lower() != 'pypy':
     info['ext_modules'] = [Extension(
         '_mummy',
-        ['_mummy.c', 'lzf/lzf_c.c', 'lzf/lzf_d.c'],
-        include_dirs=('.', './lzf'),
+        ['dump.c', 'mummymodule.c',
+            '../lzf/lzf_c.c', '../lzf/lzf_d.c',
+            '../lib/mummy_string.c', '../lib/dump.c', '../lib/load.c'],
+        include_dirs=('.', '../lzf', '../include'),
         extra_compile_args=['-Wall'])]
 
 setup(**info)
