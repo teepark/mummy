@@ -1,3 +1,5 @@
+#include "Python.h"
+#include "datetime.h"
 #include "mummy.h"
 
 
@@ -15,3 +17,4 @@
 #define MUMMYPY_STARTING_BUFFER 0x1000
 
 PyObject *python_dumps(PyObject *, PyObject *, PyObject *);
+PyObject *python_loads(PyObject *, PyObject *);

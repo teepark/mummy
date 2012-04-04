@@ -11,6 +11,8 @@ PyDateTime_CAPI *PyDateTimeCAPI;
 static PyMethodDef methods[] = {
     {"dumps", (PyCFunction)python_dumps, METH_VARARGS | METH_KEYWORDS,
         "serialize a native python object into an mummy string"},
+    {"loads", (PyCFunction)python_loads, METH_O,
+        "deserialize a mummy string to a python object"},
     {NULL, NULL, 0, NULL}
 };
 

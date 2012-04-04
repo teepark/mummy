@@ -21,7 +21,7 @@ info = dict(
 if sys.subversion[0].lower() != 'pypy':
     info['ext_modules'] = [Extension(
         '_mummy',
-        ['dump.c', 'mummymodule.c',
+        ['dump.c', 'load.c', 'mummymodule.c',
             '../lzf/lzf_c.c', '../lzf/lzf_d.c',
             '../lib/mummy_string.c', '../lib/dump.c', '../lib/load.c'],
         include_dirs=('.', '../lzf', '../include'),

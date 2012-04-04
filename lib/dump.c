@@ -32,15 +32,15 @@ mummy_feed_int(mummy_string *str, int64_t num) {
     } else if (-32768 <= num && num < 32768) {
         size = 2;
         type = MUMMY_TYPE_SHORT;
-        *(&contents[0]) = htons((int16_t)num);
+        *(int16_t *)(&contents[0]) = htons((int16_t)num);
     } else if (-2147483648LL <= num && num < 2147483648LL) {
         size = 4;
         type = MUMMY_TYPE_INT;
-        *(&contents[0]) = htonl((int32_t)num);
+        *(int32_t *)(&contents[0]) = htonl((int32_t)num);
     } else {
         size = 8;
         type = MUMMY_TYPE_LONG;
-        *(&contents[0]) = htonll((int64_t)num);
+        *(int64_t *)(&contents[0]) = htonll((int64_t)num);
     }
 
     if (mummy_string_makespace(str, size + 1)) return ENOMEM;
@@ -104,12 +104,12 @@ mummy_feed_utf8(mummy_string *str, char *data, int len) {
     } else if (len < 65536) {
         if (mummy_string_makespace(str, 3 + len)) return ENOMEM;
         str->data[str->offset++] = MUMMY_TYPE_MEDUTF8;
-        *(uint16_t *)(str->data + str->offset) = (uint16_t)len;
+        *(uint16_t *)(str->data + str->offset) = htons((uint16_t)len);
         str->offset += 2;
     } else {
         if (mummy_string_makespace(str, 5 + len)) return ENOMEM;
         str->data[str->offset++] = MUMMY_TYPE_LONGUTF8;
-        *(uint32_t *)(str->data + str->offset) = (uint32_t)len;
+        *(uint32_t *)(str->data + str->offset) = htonl((uint32_t)len);
         str->offset += 4;
     }
     memcpy(str->data + str->offset, data, len);

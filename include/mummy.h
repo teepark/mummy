@@ -90,6 +90,7 @@ typedef struct {
 } mummy_string;
 
 mummy_string *mummy_string_new(int);
+mummy_string *mummy_string_wrap(char *, int);
 
 
 /*************
@@ -104,7 +105,9 @@ int mummy_read_int(mummy_string *, int64_t *);
 int mummy_read_huge(mummy_string *, int, char **, int *);
 int mummy_read_float(mummy_string *, double *);
 int mummy_read_string(mummy_string *, int, char **, int *);
+int mummy_point_to_string(mummy_string *, char **, int *);
 int mummy_read_utf8(mummy_string *, int, char **, int *);
+int mummy_point_to_utf8(mummy_string *, char **, int *);
 int mummy_read_decimal(mummy_string *, char *, uint16_t *, uint16_t *, char **);
 int mummy_read_specialnum(mummy_string *, char *);
 int mummy_read_date(mummy_string *, short *, char *, char *);
@@ -116,7 +119,7 @@ int mummy_read_timedelta(mummy_string *, int *, int *, int *);
 /* determine container sizes */
 int mummy_container_size(mummy_string *, uint32_t *);
 
-int mummy_string_decompress(mummy_string *);
+int mummy_string_decompress(mummy_string *, char, char *);
 
 /*************
  * writing API
@@ -150,6 +153,6 @@ int mummy_open_hash(mummy_string *, int);
 
 int mummy_string_compress(mummy_string *);
 
-int mummy_string_free(mummy_string *str);
+void mummy_string_free(mummy_string *str, char);
 
 #endif /* _MUMMY_H */

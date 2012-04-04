@@ -1,5 +1,3 @@
-#include "Python.h"
-#include "datetime.h"
 #include "mummypy.h"
 
 
@@ -224,23 +222,23 @@ dump_one(PyObject *obj, mummy_string *str, PyObject *default_handler,
             c = PyString_AS_STRING(value)[0];
             Py_DECREF(value);
             switch (c) {
-                case 'n':
-                    rc = mummy_feed_nan(str, 0);
-                    goto done;
-                case 'N':
-                    rc = mummy_feed_nan(str, 1);
-                    goto done;
-                case 'F':
-                    if (!(key = PyInt_FromLong(0))) goto dec_bail0;
-                    if (!(value = PyObject_GetItem(obj, key))) goto dec_bail1;
-                    Py_DECREF(key);
-                    rc = mummy_feed_infinity(str, (char)PyInt_AS_LONG(value));
-                    Py_DECREF(value);
-                    goto done;
-                default:
-                    PyErr_Format(PyExc_ValueError,
-                            "unrecognized exponent: %c", c);
-                    goto dec_bail0;
+            case 'n':
+                rc = mummy_feed_nan(str, 0);
+                goto done;
+            case 'N':
+                rc = mummy_feed_nan(str, 1);
+                goto done;
+            case 'F':
+                if (!(key = PyInt_FromLong(0))) goto dec_bail0;
+                if (!(value = PyObject_GetItem(obj, key))) goto dec_bail1;
+                Py_DECREF(key);
+                rc = mummy_feed_infinity(str, (char)PyInt_AS_LONG(value));
+                Py_DECREF(value);
+                goto done;
+            default:
+                PyErr_Format(PyExc_ValueError,
+                        "unrecognized exponent: %c", c);
+                goto dec_bail0;
             }
         }
 
@@ -316,11 +314,10 @@ dump_one(PyObject *obj, mummy_string *str, PyObject *default_handler,
 
         if ((rc = mummy_feed_decimal(
                 str, (char)ll, (int16_t)l, (uint16_t)size, buf))) {
-            switch(rc) {
-                case EINVAL:
-                    PyErr_SetString(PyExc_SystemError,
-                            "mummy dump internal failure");
-                    return -1;
+            if (EINVAL == rc) {
+                PyErr_SetString(PyExc_SystemError,
+                        "mummy dump internal failure");
+                return -1;
             }
         }
         goto done;
@@ -372,7 +369,7 @@ python_dumps(PyObject *self, PyObject *args, PyObject *kwargs) {
     else {
         if (PyObject_IsTrue(compress)) {
             if (mummy_string_compress(str)) {
-                mummy_string_free(str);
+                mummy_string_free(str, 1);
                 return NULL;
             }
         }
@@ -382,6 +379,6 @@ python_dumps(PyObject *self, PyObject *args, PyObject *kwargs) {
 
     Py_DECREF(obj);
     Py_DECREF(default_handler);
-    mummy_string_free(str);
+    mummy_string_free(str, 1);
     return result;
 }

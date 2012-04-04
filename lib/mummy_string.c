@@ -1,3 +1,4 @@
+#include <stdio.h>
 #include <stdlib.h>
 #include <errno.h>
 
@@ -18,6 +19,14 @@ mummy_string_new(int initial_buffer) {
         free(str);
         return NULL;
     }
+    return str;
+}
+
+mummy_string *
+mummy_string_wrap(char *buffer, int size) {
+    mummy_string *str = mummy_string_new(0);
+    str->data = buffer;
+    str->len = size;
     return str;
 }
 
@@ -55,12 +64,14 @@ mummy_string_compress(mummy_string *str) {
 
     if (!(output = malloc(str->offset - 1))) return ENOMEM;
     if (0 >= (compressed = lzf_compress(str->data + 1, str->offset - 1,
-            output + 5, str->offset - 6)))
+            output + 5, str->offset - 6))) {
+        free(output);
         return 0;
+    }
 
     /* realloc the output buffer down to be a snug fit */
     if (compressed < str->offset - 6) {
-        temp = realloc(output, compressed);
+        temp = realloc(output, compressed + 5);
         if (NULL != temp) output = temp;
     }
 
@@ -73,35 +84,38 @@ mummy_string_compress(mummy_string *str) {
 }
 
 int
-mummy_string_decompress(mummy_string *str) {
+mummy_string_decompress(mummy_string *str, char free_buffer, char *rc) {
     uint32_t ucsize;
     char *output;
+
+    *rc = 0;
 
     /* not compressed */
     if (0 == (str->data[0] & 0x80)) return 0;
 
-    ucsize = ntohl(*(uint32_t *)(str->data + str->offset + 1));
-    output = malloc(ucsize + 1);
+    ucsize = ntohl(*(uint32_t *)(str->data + 1));
+    if (NULL == (output = malloc(ucsize + 2)))
+        return ENOMEM;
 
     output[0] = str->data[0] & 0x7f;
     if (ucsize != lzf_decompress(
-            str->data + 5, str->offset - 5, output, ucsize)) {
+            str->data + 5, str->len - 5, output + 1, ucsize + 1)) {
         if (E2BIG == errno || EINVAL == errno) {
             free(output);
-            return EINVAL;
+            return errno;
         }
         return -2;
     }
 
-    free(str->data);
+    *rc = 1;
+    if (free_buffer) free(str->data);
     str->data = output;
-    str->len = str->offset = ucsize + 1;
+    str->len = ucsize + 1;
     return 0;
 }
 
-int
-mummy_string_free(mummy_string *str) {
-    free(str->data);
+void
+mummy_string_free(mummy_string *str, char also_buffer) {
+    if (also_buffer) free(str->data);
     free(str);
-    return 0;
 }
