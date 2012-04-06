@@ -59,6 +59,20 @@ mummy_read_huge(mummy_string *str, int upto,
 }
 
 int
+mummy_point_to_huge(mummy_string *str, char **buf, int *result_len) {
+    uint32_t len;
+
+    if (mummy_string_space(str) < 5) return -1;
+
+    len = ntohl(*(uint32_t *)(str->data + str->offset + 1));
+    if (mummy_string_space(str) - 5 < len) return -1;
+    *result_len = len;
+    *buf = str->data + str->offset + 5;
+    str->offset += len + 5;
+    return 0;
+}
+
+int
 mummy_read_float(mummy_string *str, double *result) {
     uint64_t output;
 

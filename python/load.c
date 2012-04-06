@@ -48,18 +48,8 @@ load_one(mummy_string *str) {
         goto done;
 
     case MUMMY_TYPE_HUGE:
-        int_result = ntohl(*(uint32_t *)(str->data + str->offset + 1));
-        if (int_result > 1024) {
-            if (!(buf = malloc(int_result))) {
-                PyErr_SetString(PyExc_MemoryError, "out of memory");
-                return NULL;
-            }
-        }
-        if (mummy_read_huge(str, int_result, &buf, (int *)&int_result))
-            INVALID;
-        result = _PyLong_FromByteArray(
-                (unsigned char *)buf, int_result, 0, 1);
-        if (int_result > 1024) free(buf);
+        if (mummy_point_to_huge(str, &buf, (int *)&int_result)) INVALID;
+        result = _PyLong_FromByteArray((unsigned char *)buf, int_result, 0, 1);
         goto done;
 
     case MUMMY_TYPE_FLOAT:

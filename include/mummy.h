@@ -103,6 +103,7 @@ mummy_string *mummy_string_wrap(char *, int);
 int mummy_read_bool(mummy_string *, char *);
 int mummy_read_int(mummy_string *, int64_t *);
 int mummy_read_huge(mummy_string *, int, char **, int *);
+int mummy_point_to_huge(mummy_string *, char **, int *);
 int mummy_read_float(mummy_string *, double *);
 int mummy_read_string(mummy_string *, int, char **, int *);
 int mummy_point_to_string(mummy_string *, char **, int *);
