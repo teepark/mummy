@@ -75,7 +75,7 @@ load_one(mummy_string *str) {
     case MUMMY_TYPE_MEDLIST:
     case MUMMY_TYPE_LONGLIST:
         if (mummy_container_size(str, (uint32_t *)&int_result)) INVALID;
-        if (NULL == (result = PyList_New(int_result))) goto done;
+        if (NULL == (result = PyList_New((int)int_result))) goto done;
         for (i = 0; i < int_result; ++i) {
             if (NULL == (value = load_one(str))) goto fail;
             PyList_SET_ITEM(result, i, value);

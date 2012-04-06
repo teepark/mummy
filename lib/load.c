@@ -333,7 +333,7 @@ mummy_container_size(mummy_string *str, uint32_t *result) {
     case MUMMY_TYPE_MEDHASH:
     case MUMMY_TYPE_MEDSET:
         if (mummy_string_space(str) < 3) return -1;
-        *result = (uint32_t)*(uint16_t *)(str->data + str->offset + 1);
+        *result = (uint32_t)ntohs(*(uint16_t *)(str->data + str->offset + 1));
         str->offset += 3;
         return 0;
     case MUMMY_TYPE_LONGLIST:
@@ -341,7 +341,7 @@ mummy_container_size(mummy_string *str, uint32_t *result) {
     case MUMMY_TYPE_LONGHASH:
     case MUMMY_TYPE_LONGSET:
         if (mummy_string_space(str) < 5) return -1;
-        *result = *(uint32_t *)(str->data + str->offset + 1);
+        *result = ntohl(*(uint32_t *)(str->data + str->offset + 1));
         str->offset += 5;
         return 0;
     }
