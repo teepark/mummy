@@ -11,7 +11,7 @@ extern PyDateTime_CAPI *PyDateTimeCAPI;
 
 static PyObject *
 load_one(mummy_string *str) {
-    int64_t int_result;
+    int64_t int_result = 0;
     int i, microsecond;
     int days, seconds, microseconds;
     short year;

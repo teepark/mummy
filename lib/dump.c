@@ -225,14 +225,14 @@ mummy_feed_time(mummy_string *str, char hour, char minute, char second,
     str->data[str->offset++] = minute;
     str->data[str->offset++] = second;
     *(uint32_t *)(str->data + str->offset) = htonl(microsecond);
-    str->offset += 4;
+    str->offset += 3;
     return 0;
 }
 
 int
 mummy_feed_datetime(mummy_string *str, short year, char month, char day,
         char hour, char minute, char second, int microsecond) {
-    if (mummy_string_makespace(str, 12)) return ENOMEM;
+    if (mummy_string_makespace(str, 11)) return ENOMEM;
     str->data[str->offset++] = MUMMY_TYPE_DATETIME;
     *(uint16_t *)(str->data + str->offset) = htons(year);
     str->offset += 2;
@@ -242,7 +242,7 @@ mummy_feed_datetime(mummy_string *str, short year, char month, char day,
     str->data[str->offset++] = minute;
     str->data[str->offset++] = second;
     *(uint32_t *)(str->data + str->offset) = htonl(microsecond);
-    str->offset += 4;
+    str->offset += 3;
     return 0;
 }
 

@@ -20,17 +20,17 @@ mummy_read_int(mummy_string *str, int64_t *result) {
     switch (str->data[str->offset++]) {
     case MUMMY_TYPE_CHAR:
         if (mummy_string_space(str) < 1) return -1;
-        *result = (int64_t)(*(uint8_t *)(str->data + str->offset));
+        *result = (int64_t)(*(int8_t *)(str->data + str->offset));
         str->offset += 1;
         return 0;
     case MUMMY_TYPE_SHORT:
         if (mummy_string_space(str) < 2) return -1;
-        *result = ntohs((int64_t)(*(uint16_t *)(str->data + str->offset)));
+        *result = (int16_t)ntohs(*(int16_t *)(str->data + str->offset));
         str->offset += 2;
         return 0;
     case MUMMY_TYPE_INT:
         if (mummy_string_space(str) < 4) return -1;
-        *result = ntohl((int64_t)(*(uint32_t *)(str->data + str->offset)));
+        *result = (int32_t)ntohl(*(int32_t *)(str->data + str->offset));
         str->offset += 4;
         return 0;
     case MUMMY_TYPE_LONG:
@@ -282,27 +282,27 @@ mummy_read_date(mummy_string *str, short *year, char *month, char *day) {
 int
 mummy_read_time(mummy_string *str,
         char *hour, char *minute, char *second, int *microsecond) {
-    if (mummy_string_space(str) < 8) return -1;
+    if (mummy_string_space(str) < 7) return -1;
     *hour = *(uint8_t *)(str->data + str->offset + 1);
     *minute = *(uint8_t *)(str->data + str->offset + 2);
     *second = *(uint8_t *)(str->data + str->offset + 3);
     *microsecond = ntohl(*(uint32_t *)(str->data + str->offset + 4) << 8);
-    str->offset += 8;
+    str->offset += 7;
     return 0;
 }
 
 int
 mummy_read_datetime(mummy_string *str, short *year, char *month, char *day,
         char *hour, char *minute, char *second, int *microsecond) {
-    if (mummy_string_space(str) < 12) return -1;
+    if (mummy_string_space(str) < 11) return -1;
     *year = ntohs(*(uint16_t *)(str->data + str->offset + 1));
     *month = *(uint8_t *)(str->data + str->offset + 3);
     *day = *(uint8_t *)(str->data + str->offset + 4);
-    *hour = *(uint8_t *)(str->data + str->offset + 4);
+    *hour = *(uint8_t *)(str->data + str->offset + 5);
     *minute = *(uint8_t *)(str->data + str->offset + 6);
     *second = *(uint8_t *)(str->data + str->offset + 7);
     *microsecond = ntohl(*(uint32_t *)(str->data + str->offset + 8) << 8);
-    str->offset += 12;
+    str->offset += 11;
     return 0;
 }
 
@@ -312,7 +312,7 @@ mummy_read_timedelta(mummy_string *str, int *days, int *seconds,
     if (mummy_string_space(str) < 13) return -1;
     *days = ntohl(*(int32_t *)(str->data + str->offset + 1));
     *seconds = ntohl(*(int32_t *)(str->data + str->offset + 5));
-    *microseconds = ntohl(*(int32_t *)(str->data + str->offset + 9) << 8);
+    *microseconds = ntohl(*(int32_t *)(str->data + str->offset + 9));
     str->offset += 13;
     return 0;
 }
