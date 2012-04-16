@@ -14,7 +14,7 @@ dump_one(PyObject *obj, mummy_string *str, PyObject *default_handler,
     long l;
     long long ll;
     char c, *buf;
-    PyObject *key, *value, *iterator;
+    PyObject *key, *value, *iterator, *args;
     Py_ssize_t pst;
 
     /* infinite recursion protection with a max depth */
@@ -25,6 +25,11 @@ dump_one(PyObject *obj, mummy_string *str, PyObject *default_handler,
 
     if (obj == NULL) {
         PyErr_BadInternalCall();
+        return -1;
+    }
+
+    if (default_handler != Py_None && !PyCallable_Check(default_handler)) {
+        PyErr_SetString(PyExc_TypeError, "default must be callable or None");
         return -1;
     }
 
@@ -324,6 +329,21 @@ dump_one(PyObject *obj, mummy_string *str, PyObject *default_handler,
     }
 
     /* didn't find the object type */
+    if (default_handler != Py_None) {
+        Py_INCREF(obj);
+        if (NULL == (args = PyTuple_New(1))) {
+            Py_DECREF(obj);
+            return -1;
+        }
+        PyTuple_SET_ITEM(args, 0, obj);
+        if (!(obj = PyObject_Call(default_handler, args, NULL)))
+            return -1;
+        rc = dump_one(obj, str, Py_None, depth);
+        Py_DECREF(args);
+        Py_DECREF(obj);
+        return rc;
+    }
+
     PyErr_SetString(PyExc_TypeError, "type not serializable");
     return -1;
 
