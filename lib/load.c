@@ -232,32 +232,36 @@ mummy_point_to_utf8(mummy_string *str, char **target, int *result_len) {
 
 int
 mummy_read_decimal(mummy_string *str,
-        char *sign, uint16_t *exponent, uint16_t *count, char **digits) {
-    char is_neg;
+        char *sign, int16_t *exponent, uint16_t *count, char **digits) {
     uint16_t dsize, bytes;
     int16_t dexpo;
     int i;
+    unsigned char c;
 
-    if (mummy_string_space(str) < 4) return -1;
+    if (mummy_string_space(str) < 6) return -1;
 
     /* regular decimal number */
-    dexpo = ntohs(*(int16_t *)(str->data + str->offset + 1));
-    if ((is_neg = dexpo < 0)) dexpo = -dexpo;
-    dsize = ntohs(*(uint16_t *)(str->data + str->offset + 3));
+    dexpo = ntohs(*(int16_t *)(str->data + str->offset + 2));
+    dsize = ntohs(*(uint16_t *)(str->data + str->offset + 4));
     bytes = (dsize >> 1) + (dsize & 1 ? 1 : 0);
 
-    if (mummy_string_space(str) - 5 < bytes) return -1;
+    if (mummy_string_space(str) - 6 < bytes) return -1; /* TODO: wat is this */
     if (!(*digits = malloc(dsize))) return ENOMEM;
 
-    *sign = is_neg ? 1 : 0;
+    *sign = str->data[str->offset + 1] ? 1 : 0;
     *exponent = dexpo;
     *count = dsize;
-    str->offset += 5;
-    for (i = 0; i < bytes; ++i) {
-        *(digits[i << 1]) = str->data[str->offset] & 0xf;
-        if (((i << 1) | 1) < dsize)
-            *(digits[(i << 1) | 1]) = str->data[str->offset++] >> 4;
+    str->offset += 6;
+
+    for (i = 0; i < dsize; ++i) {
+        c = str->data[str->offset + (i>>1)];
+        if (i & 1) /* odd, get the high 4 bits */
+            c = 0 | (c >> 4);
+        else /* even, get the low 4 bits */
+            c = c & 0x0f;
+        (*digits)[i] = c;
     }
+    str->offset += bytes;
     return 0;
 }
 

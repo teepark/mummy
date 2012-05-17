@@ -118,8 +118,8 @@ mummy_feed_utf8(mummy_string *str, char *data, int len) {
 }
 
 /* decimal encoding:
+ * - char of sign (0 positive, 1 negative)
  * - signed short of decimal point position
- *   - if this is negative, it indicates that the whole number is negative
  * - unsigned short of number of digits
  * - digits (nums 0-9) paired up in bytes, low 4 bits then high 4
  */
@@ -128,12 +128,12 @@ mummy_feed_decimal(
         mummy_string *str, char is_neg, int16_t exponent, uint16_t count, char *digits) {
     int i;
     char digit;
-    if (is_neg) exponent = -exponent;
 
     if (mummy_string_makespace(str, 6 + (count >> 1) + (count & 1 ? 1 : 0)))
         return ENOMEM;
 
     str->data[str->offset++] = MUMMY_TYPE_DECIMAL;
+    str->data[str->offset++] = is_neg ? 1 : 0;
     *(int16_t *)(str->data + str->offset) = htons(exponent);
     str->offset += 2;
     *(uint16_t *)(str->data + str->offset) = htons(count);

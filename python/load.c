@@ -15,8 +15,9 @@ load_one(mummy_string *str) {
     int64_t int_result = 0;
     int i, microsecond;
     int days, seconds, microseconds;
-    short year;
-    char month, day, hour, minute, second;
+    short year, expo;
+    char month, day, hour, minute, second, sign;
+    uint16_t count;
     double float_result;
     PyObject *result, *key, *value, *triple;
     char *chr_ptr, *buf, flags;
@@ -155,39 +156,91 @@ load_one(mummy_string *str) {
         goto done;
 
     case MUMMY_TYPE_DECIMAL:
-        /* TODO */
-        return NULL;
+        if (mummy_read_decimal(str, &sign, &expo, &count, &buf)) INVALID;
+        if (NULL == (triple = PyTuple_New(3))) {
+            free(buf);
+            return NULL;
+        }
 
+        if (NULL == (value = PyTuple_New(count))) {
+            free(buf);
+            Py_DECREF(triple);
+            return NULL;
+        }
+        for (i = 0; i < count; ++i) {
+            if (NULL == (key = PyInt_FromLong((long)buf[i]))) {
+                free(buf);
+                Py_DECREF(value);
+                Py_DECREF(triple);
+                return NULL;
+            }
+            PyTuple_SET_ITEM(value, i, key);
+        }
+        free(buf);
+        PyTuple_SET_ITEM(triple, 1, value);
+
+        if (NULL == (value = PyInt_FromLong((long)sign))) {
+            Py_DECREF(triple);
+            return NULL;
+        }
+        PyTuple_SET_ITEM(triple, 0, value);
+
+        if (NULL == (value = PyInt_FromLong((long)expo))) {
+            Py_DECREF(triple);
+            return NULL;
+        }
+        PyTuple_SET_ITEM(triple, 2, value);
+
+        goto finish_decimal;
     case MUMMY_TYPE_SPECIALNUM:
         if (mummy_read_specialnum(str, &flags)) INVALID;
         if (NULL == (triple = PyTuple_New(3))) return NULL;
         switch (flags & 0xf0) {
         case MUMMY_SPECIAL_INFINITY:
-            if (NULL == (value = PyInt_FromLong(str->data[str->offset] & 1))) {
+            if (NULL == (value = PyInt_FromLong(flags & 0x01))) {
                 Py_DECREF(triple);
                 return NULL;
             }
             PyTuple_SET_ITEM(triple, 0, value);
-            if (NULL == (key = PyInt_FromLong(0))) {
+
+            if (NULL == (value = PyTuple_New(0))) {
                 Py_DECREF(triple);
                 return NULL;
             }
-            if (NULL == (value = PyTuple_New(1))) {
-                Py_DECREF(key);
-                Py_DECREF(triple);
-                return NULL;
-            }
-            PyTuple_SET_ITEM(value, 0, key);
             PyTuple_SET_ITEM(triple, 1, value);
+
             if (NULL == (value = PyString_FromString("F"))) {
                 Py_DECREF(triple);
                 return NULL;
             }
             PyTuple_SET_ITEM(triple, 2, value);
+
             goto finish_decimal;
         case MUMMY_SPECIAL_NAN:
-            /* TODO */
-            goto done;
+            /* python's decimal module actually differentiates {s,}NaN signs,
+               so it has NaN, sNaN, -NaN and -sNaN, but that's nonsense that
+               mummy doesn't support (I suspect its accidental in python) */
+            if (NULL == (value = PyInt_FromLong(0))) {
+                Py_DECREF(triple);
+                return NULL;
+            }
+            PyTuple_SET_ITEM(triple, 0, value);
+
+            if (NULL == (value = PyTuple_New(0))) {
+                Py_DECREF(triple);
+                return NULL;
+            }
+            PyTuple_SET_ITEM(triple, 1, value);
+
+            /* low byte of flags indicates NaN(0) or sNaN(1) */
+            value = PyString_FromString((flags & 0x01) ? "N" : "n");
+            if (NULL == value) {
+                Py_DECREF(triple);
+                return NULL;
+            }
+            PyTuple_SET_ITEM(triple, 2, value);
+
+            goto finish_decimal;
         default:
             PyErr_SetString(PyExc_ValueError,
                     "invalid mummy (unrecognized specialnum type)");

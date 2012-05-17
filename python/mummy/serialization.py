@@ -51,47 +51,51 @@ else:
 
 MAX_DEPTH = 256
 
-TYPE_NONE = 0x0
-TYPE_BOOL = 0x1
-TYPE_CHAR = 0x2
-TYPE_SHORT = 0x3
-TYPE_INT = 0x4
-TYPE_LONG = 0x5
-TYPE_HUGE = 0x6
-TYPE_DOUBLE = 0x7
-TYPE_SHORTSTR = 0x8
-TYPE_LONGSTR = 0x9
-TYPE_SHORTUTF8 = 0xA
-TYPE_LONGUTF8 = 0xB
-TYPE_LIST = 0xC
-TYPE_TUPLE = 0xD
-TYPE_SET = 0xE
-TYPE_DICT = 0xF
+MUMMY_TYPE_NULL = 0x0
+MUMMY_TYPE_BOOL = 0x1
+MUMMY_TYPE_CHAR = 0x2
+MUMMY_TYPE_SHORT = 0x3
+MUMMY_TYPE_INT = 0x4
+MUMMY_TYPE_LONG = 0x5
+MUMMY_TYPE_HUGE = 0x6
+MUMMY_TYPE_FLOAT = 0x7
+MUMMY_TYPE_SHORTSTR = 0x8
+MUMMY_TYPE_LONGSTR = 0x9
+MUMMY_TYPE_SHORTUTF8 = 0xA
+MUMMY_TYPE_LONGUTF8 = 0xB
+MUMMY_TYPE_LONGLIST = 0xC
+MUMMY_TYPE_LONGTUPLE = 0xD
+MUMMY_TYPE_LONGSET = 0xE
+MUMMY_TYPE_LONGHASH = 0xF
 
-TYPE_SHORTLIST = 0x10
-TYPE_SHORTTUPLE = 0x11
-TYPE_SHORTSET = 0x12
-TYPE_SHORTDICT = 0x13
+MUMMY_TYPE_SHORTLIST = 0x10
+MUMMY_TYPE_SHORTTUPLE = 0x11
+MUMMY_TYPE_SHORTSET = 0x12
+MUMMY_TYPE_SHORTHASH = 0x13
 
-TYPE_MEDLIST = 0x14
-TYPE_MEDTUPLE = 0x15
-TYPE_MEDSET = 0x16
-TYPE_MEDDICT = 0x17
-TYPE_MEDSTR = 0x18
-TYPE_MEDUTF8 = 0x19
+MUMMY_TYPE_MEDLIST = 0x14
+MUMMY_TYPE_MEDTUPLE = 0x15
+MUMMY_TYPE_MEDSET = 0x16
+MUMMY_TYPE_MEDHASH = 0x17
+MUMMY_TYPE_MEDSTR = 0x18
+MUMMY_TYPE_MEDUTF8 = 0x19
 
-TYPE_DATE = 0x1A
-TYPE_TIME = 0x1B
-TYPE_DATETIME = 0x1C
-TYPE_TIMEDELTA = 0x1D
+MUMMY_TYPE_DATE = 0x1A
+MUMMY_TYPE_TIME = 0x1B
+MUMMY_TYPE_DATETIME = 0x1C
+MUMMY_TYPE_TIMEDELTA = 0x1D
 
-TYPE_DECIMAL = 0x1E
+MUMMY_TYPE_DECIMAL = 0x1E
+MUMMY_TYPE_SPECIALNUM = 0x1F
+
+MUMMY_SPECIAL_INFINITY = 0x10
+MUMMY_SPECIAL_NAN = 0x20
 
 
 TYPEMAP = {
-    type(None): TYPE_NONE,
-    bool: TYPE_BOOL,
-    float: TYPE_DOUBLE,
+    type(None): MUMMY_TYPE_NULL,
+    bool: MUMMY_TYPE_BOOL,
+    float: MUMMY_TYPE_FLOAT,
 }
 
 _BIG_ENDIAN = struct.pack("!h", 1) == struct.pack("h", 1)
@@ -104,71 +108,73 @@ def _get_type_code(x):
 
     if type(x) is list:
         if len(x) < 256:
-            return TYPE_SHORTLIST
+            return MUMMY_TYPE_SHORTLIST
         if len(x) < 65536:
-            return TYPE_MEDLIST
-        return TYPE_LIST
+            return MUMMY_TYPE_MEDLIST
+        return MUMMY_TYPE_LONGLIST
 
     if type(x) is tuple:
         if len(x) < 256:
-            return TYPE_SHORTTUPLE
+            return MUMMY_TYPE_SHORTTUPLE
         if len(x) < 65536:
-            return TYPE_MEDTUPLE
-        return TYPE_TUPLE
+            return MUMMY_TYPE_MEDTUPLE
+        return MUMMY_TYPE_LONGTUPLE
 
     if type(x) in (set, frozenset):
         if len(x) < 256:
-            return TYPE_SHORTSET
+            return MUMMY_TYPE_SHORTSET
         if len(x) < 65536:
-            return TYPE_MEDSET
-        return TYPE_SET
+            return MUMMY_TYPE_MEDSET
+        return MUMMY_TYPE_LONGSET
 
     if type(x) is dict:
         if len(x) < 256:
-            return TYPE_SHORTDICT
+            return MUMMY_TYPE_SHORTHASH
         if len(x) < 65536:
-            return TYPE_MEDDICT
-        return TYPE_DICT
+            return MUMMY_TYPE_MEDHASH
+        return MUMMY_TYPE_LONGHASH
 
     if type(x) is bytes:
         if len(x) < 256:
-            return TYPE_SHORTSTR
+            return MUMMY_TYPE_SHORTSTR
         if len(x) < 65536:
-            return TYPE_MEDSTR
-        return TYPE_LONGSTR
+            return MUMMY_TYPE_MEDSTR
+        return MUMMY_TYPE_LONGSTR
 
     if type(x) is unicode:
         if len(x.encode('utf8')) < 256:
-            return TYPE_SHORTUTF8
+            return MUMMY_TYPE_SHORTUTF8
         if len(x.encode('utf8')) < 65536:
-            return TYPE_MEDUTF8
-        return TYPE_LONGUTF8
+            return MUMMY_TYPE_MEDUTF8
+        return MUMMY_TYPE_LONGUTF8
 
     if type(x) in (int, long):
         if -128 <= x < 128:
-            return TYPE_CHAR
+            return MUMMY_TYPE_CHAR
         if -32768 <= x < 32768:
-            return TYPE_SHORT
+            return MUMMY_TYPE_SHORT
         if -2147483648 <= x < 2147483648:
-            return TYPE_INT
+            return MUMMY_TYPE_INT
         if -9223372036854775808 <= x < 9223372036854775808:
-            return TYPE_LONG
-        return TYPE_HUGE
+            return MUMMY_TYPE_LONG
+        return MUMMY_TYPE_HUGE
 
     if type(x) is datetime.date:
-        return TYPE_DATE
+        return MUMMY_TYPE_DATE
 
     if type(x) is datetime.time:
-        return TYPE_TIME
+        return MUMMY_TYPE_TIME
 
     if type(x) is datetime.datetime:
-        return TYPE_DATETIME
+        return MUMMY_TYPE_DATETIME
 
     if type(x) is datetime.timedelta:
-        return TYPE_TIMEDELTA
+        return MUMMY_TYPE_TIMEDELTA
 
     if type(x) is decimal.Decimal:
-        return TYPE_DECIMAL
+        if x.is_nan() or x.is_infinite():
+            return MUMMY_TYPE_SPECIALNUM
+        return MUMMY_TYPE_DECIMAL
 
     raise ValueError("%r cannot be serialized" % type(x))
 
@@ -304,65 +310,66 @@ def _dump_timedelta(x, depth=0, default=None):
 
 def _dump_decimal(x, depth=0, default=None):
     sign, digits, expo = x.as_tuple()
-    flags = 0
-
-    flags |= expo in ("n", "N", "F")
-    flags |= sign << 1
-    if flags & 1:
-        if expo == "F":
-            flags |= 4
-        else:
-            flags |= (expo == "N") << 3
-
-        return _dump_char(flags)
-
-    digitpairs = []
+    pairs = []
     for i, dig in enumerate(digits):
         if not 0 <= dig <= 9:
             raise ValueError("invalid digit")
 
         if not (i & 1):
-            digitpairs.append(0)
+            # even
+            pairs.append(0)
+        else:
+            # odd
             dig <<= 4
+        pairs[-1] |= dig
 
-        digitpairs[-1] |= dig
+    return (struct.pack("!bhH", sign, expo, len(digits)) +
+            "".join(map(_dump_uchar, pairs)))
 
-    return (struct.pack("!BhH", flags, expo, len(digits)) +
-            "".join(map(chr, digitpairs)))
+def _dump_specialnum(x, depth=0, default=None):
+    if x.is_snan():
+        return _dump_uchar(MUMMY_SPECIAL_NAN | 1)
+
+    if x.is_nan():
+        return _dump_uchar(MUMMY_SPECIAL_NAN)
+
+    if x.is_infinite():
+        return _dump_uchar(MUMMY_SPECIAL_INFINITY | int(x < 0))
 
 
 _dumpers = {
-    TYPE_NONE: _dump_none,
-    TYPE_BOOL: _dump_bool,
-    TYPE_CHAR: _dump_char,
-    TYPE_SHORT: _dump_short,
-    TYPE_INT: _dump_int,
-    TYPE_LONG: _dump_long,
-    TYPE_HUGE: _dump_huge,
-    TYPE_DOUBLE: _dump_double,
-    TYPE_SHORTSTR: _dump_shortstr,
-    TYPE_MEDSTR: _dump_medstr,
-    TYPE_LONGSTR: _dump_longstr,
-    TYPE_SHORTUTF8: _dump_shortutf8,
-    TYPE_MEDUTF8: _dump_medutf8,
-    TYPE_LONGUTF8: _dump_longutf8,
-    TYPE_LIST: _dump_list,
-    TYPE_TUPLE: _dump_tuple,
-    TYPE_SET: _dump_set,
-    TYPE_DICT: _dump_dict,
-    TYPE_SHORTLIST: _dump_shortlist,
-    TYPE_MEDLIST: _dump_medlist,
-    TYPE_SHORTTUPLE: _dump_shorttuple,
-    TYPE_MEDTUPLE: _dump_medtuple,
-    TYPE_SHORTSET: _dump_shortset,
-    TYPE_MEDSET: _dump_medset,
-    TYPE_SHORTDICT: _dump_shortdict,
-    TYPE_MEDDICT: _dump_meddict,
-    TYPE_DATE: _dump_date,
-    TYPE_TIME: _dump_time,
-    TYPE_DATETIME: _dump_datetime,
-    TYPE_TIMEDELTA: _dump_timedelta,
-    TYPE_DECIMAL: _dump_decimal,
+    MUMMY_TYPE_NULL: _dump_none,
+    MUMMY_TYPE_BOOL: _dump_bool,
+    MUMMY_TYPE_CHAR: _dump_char,
+    MUMMY_TYPE_SHORT: _dump_short,
+    MUMMY_TYPE_INT: _dump_int,
+    MUMMY_TYPE_LONG: _dump_long,
+    MUMMY_TYPE_HUGE: _dump_huge,
+    MUMMY_TYPE_FLOAT: _dump_double,
+    MUMMY_TYPE_SHORTSTR: _dump_shortstr,
+    MUMMY_TYPE_MEDSTR: _dump_medstr,
+    MUMMY_TYPE_LONGSTR: _dump_longstr,
+    MUMMY_TYPE_SHORTUTF8: _dump_shortutf8,
+    MUMMY_TYPE_MEDUTF8: _dump_medutf8,
+    MUMMY_TYPE_LONGUTF8: _dump_longutf8,
+    MUMMY_TYPE_LONGLIST: _dump_list,
+    MUMMY_TYPE_LONGTUPLE: _dump_tuple,
+    MUMMY_TYPE_LONGSET: _dump_set,
+    MUMMY_TYPE_LONGHASH: _dump_dict,
+    MUMMY_TYPE_SHORTLIST: _dump_shortlist,
+    MUMMY_TYPE_MEDLIST: _dump_medlist,
+    MUMMY_TYPE_SHORTTUPLE: _dump_shorttuple,
+    MUMMY_TYPE_MEDTUPLE: _dump_medtuple,
+    MUMMY_TYPE_SHORTSET: _dump_shortset,
+    MUMMY_TYPE_MEDSET: _dump_medset,
+    MUMMY_TYPE_SHORTHASH: _dump_shortdict,
+    MUMMY_TYPE_MEDHASH: _dump_meddict,
+    MUMMY_TYPE_DATE: _dump_date,
+    MUMMY_TYPE_TIME: _dump_time,
+    MUMMY_TYPE_DATETIME: _dump_datetime,
+    MUMMY_TYPE_TIMEDELTA: _dump_timedelta,
+    MUMMY_TYPE_DECIMAL: _dump_decimal,
+    MUMMY_TYPE_SPECIALNUM: _dump_specialnum,
 }
 
 def pure_python_dumps(item, default=None, depth=0, compress=True):
@@ -572,67 +579,68 @@ def _load_timedelta(x):
             _load_int(x)[0], _load_int(x[4:8])[0], _load_int(x[8:12])[0]), 12)
 
 def _load_decimal(x):
-    flags = struct.unpack("B", x[0])[0]
+    sign = _load_char(x[0])[0]
+    expo = _load_short(x[1:3])[0]
+    count = _load_ushort(x[3:5])[0]
 
-    if flags & 1:
-        width = 1
-        if flags & 4:
-            # (+ or -) Infinity
-            triple = ((flags & 2) >> 1, (0,), "F")
-        else:
-            # [s]NaN
-            triple = (0, (), flags & 8 and "N" or "n")
-    else:
-        sign = (flags & 2) >> 1
-        exponent, length = struct.unpack("!hH", x[1:5])
-        width = 5 + (length // 2) + (length & 1)
+    width = 5 + (count >> 1) + (count & 1)
+    digit_bytes = map(ord, x[5:width])
+    digits = []
+    for i, b in enumerate(digit_bytes[:-1]):
+        digits.append(b & 0x0f)
+        digits.append(b >> 4)
+    digits.append(digit_bytes[-1] & 0x0f)
+    if not count & 1:
+        digits.append(digit_bytes[-1] >> 4)
 
-        digitbytes = map(ord, x[5:width])
-        digits = []
-        for i, b in enumerate(digitbytes):
-            digits.append((b & 0xf0) >> 4)
-            digits.append(b & 0xf)
+    return decimal.Decimal((sign, digits, expo)), width
 
-        if not digits[-1]:
-            digits.pop()
+def _load_specialnum(x):
+    b = _load_uchar(x[0])[0]
+    if (b & 0xf0) == MUMMY_SPECIAL_INFINITY:
+        if b & 0x01:
+            return decimal.Decimal("-Infinity"), 1
+        return decimal.Decimal("Infinity"), 1
 
-        triple = (sign, digits, exponent)
-
-    return decimal.Decimal(triple), width
+    if (b & 0xf0) == MUMMY_SPECIAL_NAN:
+        if b & 0x01:
+            return decimal.Decimal("sNaN"), 1
+        return decimal.Decimal("NaN"), 1
 
 
 _loaders = {
-    TYPE_NONE: _load_none,
-    TYPE_BOOL: _load_bool,
-    TYPE_CHAR: _load_char,
-    TYPE_SHORT: _load_short,
-    TYPE_INT: _load_int,
-    TYPE_LONG: _load_long,
-    TYPE_HUGE: _load_huge,
-    TYPE_DOUBLE: _load_double,
-    TYPE_SHORTSTR: _load_shortstr,
-    TYPE_MEDSTR: _load_medstr,
-    TYPE_LONGSTR: _load_longstr,
-    TYPE_SHORTUTF8: _load_shortutf8,
-    TYPE_MEDUTF8: _load_medutf8,
-    TYPE_LONGUTF8: _load_longutf8,
-    TYPE_LIST: _load_list,
-    TYPE_TUPLE: _load_tuple,
-    TYPE_SET: _load_set,
-    TYPE_DICT: _load_dict,
-    TYPE_SHORTLIST: _load_shortlist,
-    TYPE_MEDLIST: _load_medlist,
-    TYPE_SHORTTUPLE: _load_shorttuple,
-    TYPE_MEDTUPLE: _load_medtuple,
-    TYPE_SHORTSET: _load_shortset,
-    TYPE_MEDSET: _load_medset,
-    TYPE_SHORTDICT: _load_shortdict,
-    TYPE_MEDDICT: _load_meddict,
-    TYPE_DATE: _load_date,
-    TYPE_TIME: _load_time,
-    TYPE_DATETIME: _load_datetime,
-    TYPE_TIMEDELTA: _load_timedelta,
-    TYPE_DECIMAL: _load_decimal,
+    MUMMY_TYPE_NULL: _load_none,
+    MUMMY_TYPE_BOOL: _load_bool,
+    MUMMY_TYPE_CHAR: _load_char,
+    MUMMY_TYPE_SHORT: _load_short,
+    MUMMY_TYPE_INT: _load_int,
+    MUMMY_TYPE_LONG: _load_long,
+    MUMMY_TYPE_HUGE: _load_huge,
+    MUMMY_TYPE_FLOAT: _load_double,
+    MUMMY_TYPE_SHORTSTR: _load_shortstr,
+    MUMMY_TYPE_MEDSTR: _load_medstr,
+    MUMMY_TYPE_LONGSTR: _load_longstr,
+    MUMMY_TYPE_SHORTUTF8: _load_shortutf8,
+    MUMMY_TYPE_MEDUTF8: _load_medutf8,
+    MUMMY_TYPE_LONGUTF8: _load_longutf8,
+    MUMMY_TYPE_LONGLIST: _load_list,
+    MUMMY_TYPE_LONGTUPLE: _load_tuple,
+    MUMMY_TYPE_LONGSET: _load_set,
+    MUMMY_TYPE_LONGHASH: _load_dict,
+    MUMMY_TYPE_SHORTLIST: _load_shortlist,
+    MUMMY_TYPE_MEDLIST: _load_medlist,
+    MUMMY_TYPE_SHORTTUPLE: _load_shorttuple,
+    MUMMY_TYPE_MEDTUPLE: _load_medtuple,
+    MUMMY_TYPE_SHORTSET: _load_shortset,
+    MUMMY_TYPE_MEDSET: _load_medset,
+    MUMMY_TYPE_SHORTHASH: _load_shortdict,
+    MUMMY_TYPE_MEDHASH: _load_meddict,
+    MUMMY_TYPE_DATE: _load_date,
+    MUMMY_TYPE_TIME: _load_time,
+    MUMMY_TYPE_DATETIME: _load_datetime,
+    MUMMY_TYPE_TIMEDELTA: _load_timedelta,
+    MUMMY_TYPE_DECIMAL: _load_decimal,
+    MUMMY_TYPE_SPECIALNUM: _load_specialnum,
 }
 
 def _loads(data):

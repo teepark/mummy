@@ -109,7 +109,7 @@ int mummy_read_string(mummy_string *, int, char **, int *);
 int mummy_point_to_string(mummy_string *, char **, int *);
 int mummy_read_utf8(mummy_string *, int, char **, int *);
 int mummy_point_to_utf8(mummy_string *, char **, int *);
-int mummy_read_decimal(mummy_string *, char *, uint16_t *, uint16_t *, char **);
+int mummy_read_decimal(mummy_string *, char *, int16_t *, uint16_t *, char **);
 int mummy_read_specialnum(mummy_string *, char *);
 int mummy_read_date(mummy_string *, short *, char *, char *);
 int mummy_read_time(mummy_string *, char *, char *, char *, int *);

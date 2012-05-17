@@ -150,14 +150,14 @@ generate({
     'DateTimeWithSomethingAfterIt': [datetime.datetime.now(), 17],
 
     # not yet implemented in the new C loader
-    #'DecimalNaN': decimal.Decimal('NaN'),
-    #'DecimalSNaN': decimal.Decimal('sNaN'),
-    #'DecimalInfinity': decimal.Decimal('Infinity'),
-    #'DecimalNegInfinity': decimal.Decimal('-Infinity'),
-    #'DecimalPositiveOdd': decimal.Decimal('106.1984'),
-    #'DecimalNegaviteOdd': decimal.Decimal('-106.1984'),
-    #'DecimalPositiveEven': decimal.Decimal('1106.1984'),
-    #'DecimalNegativeEven': decimal.Decimal('-1106.1984'),
+    'DecimalNaN': decimal.Decimal('NaN'),
+    'DecimalSNaN': decimal.Decimal('sNaN'),
+    'DecimalInfinity': decimal.Decimal('Infinity'),
+    'DecimalNegInfinity': decimal.Decimal('-Infinity'),
+    'DecimalPositiveOdd': decimal.Decimal('106.1984'),
+    'DecimalNegaviteOdd': decimal.Decimal('-106.1984'),
+    'DecimalPositiveEven': decimal.Decimal('1106.1984'),
+    'DecimalNegativeEven': decimal.Decimal('-1106.1984'),
 })
 
 
