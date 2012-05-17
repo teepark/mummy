@@ -1,6 +1,7 @@
 #include "mummypy.h"
 
 extern PyDateTime_CAPI *PyDateTimeCAPI;
+extern PyObject *PyDecimalType;
 
 #define INVALID do {\
                     PyErr_SetString(PyExc_ValueError,\
@@ -17,8 +18,8 @@ load_one(mummy_string *str) {
     short year;
     char month, day, hour, minute, second;
     double float_result;
-    PyObject *result, *key, *value;
-    char *chr_ptr, *buf;
+    PyObject *result, *key, *value, *triple;
+    char *chr_ptr, *buf, flags;
 
     if (str->len - str->offset <= 0) {
         INVALID;
@@ -153,13 +154,61 @@ load_one(mummy_string *str) {
                 PyDateTimeCAPI->DeltaType);
         goto done;
 
-    /* TODO: decimal */
+    case MUMMY_TYPE_DECIMAL:
+        /* TODO */
+        return NULL;
+
+    case MUMMY_TYPE_SPECIALNUM:
+        if (mummy_read_specialnum(str, &flags)) INVALID;
+        if (NULL == (triple = PyTuple_New(3))) return NULL;
+        switch (flags & 0xf0) {
+        case MUMMY_SPECIAL_INFINITY:
+            if (NULL == (value = PyInt_FromLong(str->data[str->offset] & 1))) {
+                Py_DECREF(triple);
+                return NULL;
+            }
+            PyTuple_SET_ITEM(triple, 0, value);
+            if (NULL == (key = PyInt_FromLong(0))) {
+                Py_DECREF(triple);
+                return NULL;
+            }
+            if (NULL == (value = PyTuple_New(1))) {
+                Py_DECREF(key);
+                Py_DECREF(triple);
+                return NULL;
+            }
+            PyTuple_SET_ITEM(value, 0, key);
+            PyTuple_SET_ITEM(triple, 1, value);
+            if (NULL == (value = PyString_FromString("F"))) {
+                Py_DECREF(triple);
+                return NULL;
+            }
+            PyTuple_SET_ITEM(triple, 2, value);
+            goto finish_decimal;
+        case MUMMY_SPECIAL_NAN:
+            /* TODO */
+            goto done;
+        default:
+            PyErr_SetString(PyExc_ValueError,
+                    "invalid mummy (unrecognized specialnum type)");
+            return NULL;
+        }
 
     default:
         PyErr_SetString(PyExc_ValueError, "invalid mummy (unrecognized type)");
         return NULL;
 
-    }/* switch */
+    }/* switch mummy_type */
+
+finish_decimal:
+    if (NULL == (value = PyTuple_New(1))) {
+        Py_DECREF(triple);
+        return NULL;
+    }
+    PyTuple_SET_ITEM(value, 0, triple);
+    result = PyObject_Call(PyDecimalType, value, NULL);
+    Py_DECREF(value);
+    return result;
 
 incref:
     Py_INCREF(result);
