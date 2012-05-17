@@ -1033,7 +1033,7 @@ load_one(offsetstring *string, char intern) {
         break;
     case TYPE_SHORTLIST:
         HAS_SPACE(string, 1);
-        size = *(char *)(string->data + string->offset++);
+        size = *(uint8_t *)(string->data + string->offset++);
         obj = PyList_New(size);
         for (i = 0; i < size; i++) {
             value = load_one(string, 0);
@@ -1065,7 +1065,7 @@ load_one(offsetstring *string, char intern) {
         break;
     case TYPE_SHORTTUPLE:
         HAS_SPACE(string, 1);
-        size = *(char *)(string->data + string->offset++);
+        size = *(uint8_t *)(string->data + string->offset++);
         obj = PyTuple_New(size);
         for (i = 0; i < size; i++) {
             value = load_one(string, 0);
@@ -1097,7 +1097,7 @@ load_one(offsetstring *string, char intern) {
         break;
     case TYPE_SHORTSET:
         HAS_SPACE(string, 1);
-        size = *(char *)(string->data + string->offset++);
+        size = *(uint8_t *)(string->data + string->offset++);
 #if PY_MAJOR_VERSION == 2 && PY_MINOR_VERSION <= 4
         obj = PySet_Type.tp_alloc(&PySet_Type, 0);
         ((PySetObject *)obj)->data = PyDict_New();
@@ -1156,7 +1156,7 @@ load_one(offsetstring *string, char intern) {
         break;
     case TYPE_SHORTDICT:
         HAS_SPACE(string, 1);
-        size = *(char *)(string->data + string->offset++);
+        size = *(uint8_t *)(string->data + string->offset++);
         obj = PyDict_New();
         while (size) {
             key = load_one(string, 1);
