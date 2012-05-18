@@ -1461,9 +1461,9 @@ static PyMethodDef methods[] = {
 
 
 #ifdef IS_PYTHON3
-static struct PyModuleDef _mummymodule = {
+static struct PyModuleDef oldmummymodule = {
     PyModuleDef_HEAD_INIT,
-    "_mummy",
+    "_oldmummy",
     "",
     -1,
     methods,
@@ -1474,10 +1474,10 @@ static struct PyModuleDef _mummymodule = {
 };
 
 PyMODINIT_FUNC
-PyInit__mummy(void) {
+PyInit__oldmummy(void) {
     PyObject *mummy_module, *decimal_module;
 
-    mummy_module = PyModule_Create(&_mummymodule);
+    mummy_module = PyModule_Create(&oldmummymodule);
 
     PyDateTime_IMPORT;
 
@@ -1489,10 +1489,10 @@ PyInit__mummy(void) {
 }
 #else
 PyMODINIT_FUNC
-init_mummy(void) {
+init_oldmummy(void) {
     PyObject *decimal_module;
 
-    Py_InitModule("_mummy", methods);
+    Py_InitModule("_oldmummy", methods);
 
     decimal_module = PyImport_ImportModule("decimal");
     PyDecimalType = PyObject_GetAttrString(decimal_module, "Decimal");

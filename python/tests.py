@@ -11,7 +11,8 @@ import string
 import sys
 import unittest
 
-import mummy
+import mummy as newmummy
+import oldmummy
 
 
 if sys.version_info[0] >= 3:
@@ -31,30 +32,34 @@ else:
 
 
 class BasicMummyTests(unittest.TestCase):
+    mummy = newmummy
+
     def assertEqual(self, a, b):
         if isinstance(a, decimal.Decimal) and a.is_nan():
-            self.assert_(isinstance(b, decimal.Decimal) and b.is_nan(), (a, b))
+            super(BasicMummyTests, self).assertEqual(a.is_nan(), b.is_nan())
+            super(BasicMummyTests, self).assertEqual(a.is_snan(), b.is_snan())
         else:
             super(BasicMummyTests, self).assertEqual(a, b)
 
     def encoding_reference(self, val, default=None):
-        c = mummy.dumps(val, default)
-        py = mummy.pure_python_dumps(val, default)
+        c = self.mummy.dumps(val, default)
+        py = self.mummy.pure_python_dumps(val, default)
         self.assertEqual(c, py)
 
-    def decoding_reference(self, data):
-        c = mummy.loads(data)
-        py = mummy.pure_python_loads(data)
+    def decoding_reference(self, *args):
+        data = self.mummy.dumps(*args)
+        c = self.mummy.loads(data)
+        py = self.mummy.pure_python_loads(data)
         self.assertEqual(c, py)
 
     def roundtrip(self, val, default=None):
-        encoded = mummy.dumps(val, default)
-        finished = mummy.loads(encoded)
+        encoded = self.mummy.dumps(val, default)
+        finished = self.mummy.loads(encoded)
         self.assertEqual(val, finished)
 
     def pure_python_roundtrip(self, val, default=None):
-        encoded = mummy.pure_python_dumps(val, default)
-        finished = mummy.pure_python_loads(encoded)
+        encoded = self.mummy.pure_python_dumps(val, default)
+        finished = self.mummy.pure_python_loads(encoded)
 
         if isinstance(val, decimal.Decimal) and val.is_nan():
             self.assert_(isinstance(finished, decimal.Decimal) and
@@ -62,13 +67,23 @@ class BasicMummyTests(unittest.TestCase):
         else:
             self.assertEqual(val, finished)
 
+    def backwards_compatible(self, val):
+        new_enc = newmummy.dumps(val)
+        old_enc = oldmummy.dumps(val)
 
-def _make_test(name, target):
+        # they serialize to the same string
+        self.assertEqual(new_enc, old_enc)
+
+class OldMummyTests(BasicMummyTests):
+    mummy = oldmummy
+
+
+def _make_test(name, target, compatible, base):
     def test_encoding_reference(self):
         self.encoding_reference(target)
 
     def test_decoding_reference(self):
-        self.decoding_reference(mummy.dumps(target))
+        self.decoding_reference(target)
 
     def test_roundtrip(self):
         self.roundtrip(target)
@@ -76,13 +91,33 @@ def _make_test(name, target):
     def test_pure_python_roundtrip(self):
         self.pure_python_roundtrip(target)
 
+    if compatible:
+        def test_backwards_compatible(self):
+            self.backwards_compatible(target)
+
     return type(name + 'Test', (BasicMummyTests,), locals())
 
 
 def generate(targets):
     globals()['tests'] = targets
     for title, target in iteritems(targets):
-        globals()[title + 'Test'] = _make_test(title, target)
+        compat = title not in INCOMPATIBLE
+        globals()[title + 'Test'] = _make_test(
+                title, target, compat, BasicMummyTests)
+        globals()['OldMummy' + title + 'Test'] = _make_test(
+                title, target, False, OldMummyTests)
+
+# special numbers got a different serialization
+INCOMPATIBLE = frozenset([
+    'DecimalNaN',
+    'DecimalSNaN',
+    'DecimalInfinity',
+    'DecimalNegInfinity',
+    'DecimalPositiveOdd',
+    'DecimalNegaviteOdd',
+    'DecimalPositiveEven',
+    'DecimalNegativeEven',
+])
 
 
 generate({
@@ -163,10 +198,12 @@ generate({
 
 class ExtensionExistsTest(unittest.TestCase):
     def runTest(self):
-        assert mummy.has_extension
+        assert oldmummy.has_extension
+        assert newmummy.has_extension
 
 
 class RecursionDepthTest(unittest.TestCase):
+    mummy = newmummy
 
     # python prints out an extra warning even when the recursion
     # depth exception is caught. this is expected, so silence it
@@ -181,15 +218,18 @@ class RecursionDepthTest(unittest.TestCase):
     def test_c_version(self):
         l = []
         l.append(l)
-        self.assertRaises(ValueError, mummy.dumps, l)
+        self.assertRaises(ValueError, self.mummy.dumps, l)
 
     def test_pure_python_version(self):
         l = []
         l.append(l)
-        self.assertRaises(ValueError, mummy.pure_python_dumps, l)
+        self.assertRaises(ValueError, self.mummy.pure_python_dumps, l)
+
+class OldMummyRecursionDepthTest(RecursionDepthTest):
+    mummy = oldmummy
 
 
-class DefaultFormatterTest(BasicMummyTests):
+class DefaultFormatter(object):
     def object_formatter(self, o):
         if type(o) is object:
             return ('unhandled type', 'object')
@@ -198,7 +238,7 @@ class DefaultFormatterTest(BasicMummyTests):
     def test_objects(self):
         o = object()
         self.encoding_reference(o, self.object_formatter)
-        self.decoding_reference(mummy.dumps(o, self.object_formatter))
+        self.decoding_reference(o, self.object_formatter)
 
     if fractions:
         def fraction_formatter(self, f):
@@ -210,7 +250,13 @@ class DefaultFormatterTest(BasicMummyTests):
             f = fractions.Fraction(5, 7)
             d = self.fraction_formatter
             self.encoding_reference(f, d)
-            self.decoding_reference(mummy.dumps(f, d))
+            self.decoding_reference(f, d)
+
+class DefaultFormatterTest(DefaultFormatter, BasicMummyTests):
+    pass
+
+class OldMummyDefaultFormatterTest(DefaultFormatter, OldMummyTests):
+    pass
 
 
 if __name__ == '__main__':
