@@ -184,7 +184,6 @@ generate({
     'TimeDelta': datetime.timedelta(3, 11, 12345),
     'DateTimeWithSomethingAfterIt': [datetime.datetime.now(), 17],
 
-    # not yet implemented in the new C loader
     'DecimalNaN': decimal.Decimal('NaN'),
     'DecimalSNaN': decimal.Decimal('sNaN'),
     'DecimalInfinity': decimal.Decimal('Infinity'),
