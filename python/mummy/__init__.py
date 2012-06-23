@@ -1,62 +1,85 @@
 """
-mummy is the codename for a data serialization format and accompanying
+mummy is the name for a data serialization format and accompanying
 (de)serializer.
 
-the format is designed to be first fast, and second compact, completely
-sacrificing human-readability in the name of those two values.
+the format is designed to be first fast and second compact, sacrificing
+human-readability in the name of those two values.
 
 it's prefix-encoded. that means the first byte is the type, and that is
 followed by the content. depending on the type, the content may begin with more
 meta-data.
 
 first byte is the type:
-    0x00 null (python None)
+    0x00 null
     0x01 boolean
-    0x02 char (fits in a 8 bit signed int)
-    0x03 short (fits in a 16 bit signed int)
-    0x04 integer (fits in a 32 bit signed int)
-    0x05 long (fits in a 64 bit signed int)
-    0x06 huge (signed integer in a big-endian byte array)
-    0x07 double
-    0x08 shortstring(bytes, any encoding, up to 255 chars)
-    0x09 longstring (bytes, any encoding)
+    0x02 char
+    0x03 short
+    0x04 integer
+    0x05 long
+    0x06 huge
+    0x07 float
+    0x08 shortstring
+    0x18 medstring
+    0x09 longstring
     0x0A short utf8 string
+    0x19 medium utf8
     0x0B long utf8 string
-    0x0C list
-    0x0D tuple
-    0x0E set
-    0x0F dictionary
+    0x10 short list
+    0x14 medium list
+    0x0C long list
+    0x11 short tuple
+    0x15 medium tuple
+    0x0D long tuple
+    0x12 short set
+    0x16 mediumset
+    0x0E long set
+    0x13 short hash
+    0x17 medium hash
+    0x0F long hash
+    0x1A date
+    0x1B time
+    0x1C date & time
+    0x1D time difference
+    0x1E decimal
+    0x1F special number
 
-    0x10 short list (<256 items)
-    0x11 short tuple (<256 items)
-    0x12 short set (<256 items)
-    0x13 short dict (<256 items)
-
-* null: no body
-* boolean: one byte body (null or 1)
-* char: 1 byte body
-* short: 2 byte body
-* integer: 4 byte body
-* long: 8 byte body
-* huge: 4 byte header holding the length of the body in bytes, the body is a
-        base-256 integer
-* double: a C double
-* short string: 1 byte header holding the length of the body in bytes
-* long string: 4 byte header holding the length of the body in bytes
-* short utf8: 1 byte header holding the length of the body in bytes, mummy
-        encodes on serialization and decodes on deserialization
-* long utf8: 4 byte header holding the length of the body in bytes, mummy
-        encodes on serialization and decodes on deserialization
-* list: 4 byte header contains the number of objects contained, the body is
-        just the mummified contents with no separators
-* tuple: same as list, only difference is the type
-* set: same as list, only difference is the type
-* dictionary: flatten the .items(), then same as list except for the type
-* short list, short tuple, short set, short dict: same as above but with 1
-        byte headers
-
-all the number types are signed and stored big-endian, except that all header
-numbers are unsigned.
+* null: no body, decodes to python None
+* boolean: one byte body (0 or 1), python bool
+* char, short, integer, long: 1, 2, 4, 8 byte bodies respectively, containing
+        big-endian signed integers. comes out as a python int (on 32 bit
+        pythons the mummy 'long' type will be a python long)
+* huge: 4 byte prefix holding the length of the rest of the body, which is a
+        big-endian signed integer of arbitrary size. decodes to a python long.
+* float: 64-bit IEEE floating point. python float type.
+* strings: 1, 2 or 4 byte prefix for (short, med, long) strings. prefix
+        contains the length of the body, which is just the input bytes. decodes
+        to python bytestring (python2 string, python3 bytes).
+* utf8: same as strings but encodes from/decodes to python unicode strings via
+        UTF-8. the length prefix is encoded length, not unicode char count.
+* lists: 1, 2 or 4 byte length prefix for (short, med, long) lists. prefix in
+        this case is # of contained elements, not body byte length. the body
+        simply holds the mummified contents.
+* tuples: same as lists, only difference is the python type
+* sets: same as lists, only difference is the python type
+* hashes: 1, 2 or 4 byte length prefix holds # of contained key value pairs.
+        the body is mummified alternating keys and values with no separators.
+        encodes from/decodes to python dict.
+* date: no header, then 2 byte unsigned big-endian year, one byte month, one
+        byte day. python type datetime.date
+* time: no header, then one byte each for (hour, minute, second), then unsigned
+        3-byte big-endian microsecond. python type is datetime.time
+* date & time: after the single type byte it holds the bodies of a date and
+        time mashed together. python type is datetime.datetime
+* time difference: signed 4 big-endian bytes for each of days, seconds,
+        microseconds. python type is datetime.timedelta.
+* decimal: single byte of sign (0 or 1), 2 byte signed big-endian for decimal
+        point position, 2 byte unsigned big-endian for number of digits, then
+        4-bit unsigned numbers for digits alternating low 4, high 4 (always
+        low 4 first). python type is decimal.Decimal.
+* special numbers: single byte body, the high 4 bits value can be 1 for
+        infinity or 2 for NaN, and the low 4 bits value being 1 (instead of 0)
+        turns Infinity into -Infinity, or NaN into sNaN. the python class is
+        decimal.Decimal, which supports all 4 of these special numbers.
 
 the main implementation is in C, but there is a pure-python version it falls
 back to if the extension is unavailable. the module-global `has_extension` is a
