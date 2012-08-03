@@ -4,6 +4,8 @@ import sys
 import time
 
 import mummy
+import oldmummy
+
 try:
     import cPickle
 except ImportError:
@@ -67,7 +69,9 @@ def padright(s, upto, padchar=" "):
     return s + (padchar * (upto - len(s)))
 
 
-contenders = [('mummy', (mummy.dumps, mummy.loads))]
+contenders = [
+        ('mummy', (mummy.dumps, mummy.loads)),
+        ('oldmummy', (oldmummy.dumps, oldmummy.loads))]
 if wbin:
 	contenders.append(('wirebin', (wbin.serialize, wbin.deserialize)))
 if yajl:
