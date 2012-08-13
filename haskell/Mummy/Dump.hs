@@ -1,4 +1,4 @@
-module Mummy.Dump2
+module Mummy.Dump
 ( dumps
 , dump
 ) where
@@ -185,6 +185,7 @@ instance MummySerializable LBS.ByteString where
 -- to the contained types
 --
 instance MummySerializable Char where
+    -- dumping a Char is the same as dumping a length 1 [Char]
     dump = dump . (:[])
 
     dumpList x = LBS.fromChunks $ typecode : len : toChunks bs
