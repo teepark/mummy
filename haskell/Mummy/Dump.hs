@@ -1,6 +1,11 @@
+{-# LANGUAGE GADTs, StandaloneDeriving #-}
+
 module Mummy.Dump
 ( dumps
 , dump
+
+, Infinitable
+, MaybeANumber
 ) where
 
 import Control.Applicative ((<$>), (<*>))
@@ -227,48 +232,25 @@ instance Integral i => MummySerializable (DecimalRaw i) where
               bytes  = doublePackBytes digits
 
 
--- type for [s]NaN and [-]Infinity, instance for Num
+-- types for [s]NaN and [-]Infinity, instance for Num
 --
-data SpecialNum = Infinity { isNeg :: Bool } | NaN | SNaN deriving (Show)
+data Infinitable a = NegativeInfinity | Finite a | Infinity
+    deriving (Eq, Show, Ord)
 
-instance Num SpecialNum where
-    SNaN             + _                = error "SNaN is not defined"
-    NaN              + _                = NaN
-    (Infinity True)  + (Infinity False) = NaN
-    (Infinity False) + _                = Infinity False
-    (Infinity True)  + _                = Infinity True
+data MaybeANumber a where
+    NaN :: Num a => MaybeANumber a
+    SNaN :: Num a => MaybeANumber a
+    InFact :: Num a => a -> MaybeANumber a
+deriving instance Show a => Show (MaybeANumber a)
 
-    SNaN             * _                = error "SNaN is not defined"
-    NaN              * _                = NaN
-    (Infinity False) * (Infinity False) = Infinity False
-    (Infinity True)  * (Infinity True)  = Infinity False
-    (Infinity True)  * (Infinity False) = Infinity True
+instance (MummySerializable a) => MummySerializable (Infinitable a) where
+    dumps NegativeInfinity = BS.pack [0x1F, 0x11]
+    dumps Infinity         = BS.pack [0x1F, 0x10]
 
-    SNaN         - _            = error "SNaN is not defined"
-    NaN          - _            = NaN
-    a            - (Infinity x) = a + (Infinity (not x))
-    (Infinity x) - a            = (Infinity x) + (- a)
-
-    negate SNaN         = error "SNaN is not defined"
-    negate NaN          = NaN
-    negate (Infinity x) = Infinity (not x)
-
-    abs SNaN         = error "SNaN is not defined"
-    abs NaN          = NaN
-    abs (Infinity _) = Infinity False
-
-    signum SNaN             = error "SNaN is not defined"
-    signum NaN              = 1
-    signum (Infinity False) = 1
-    signum (Infinity True)  = -1
-
-    fromInteger x = error "SpecialNums cannot be created from Integers"
-
-instance MummySerializable SpecialNum where
-    dumps (Infinity False) = BS.pack [31, 0x10]
-    dumps (Infinity True)  = BS.pack [31, 0x11]
-    dumps NaN              = BS.pack [31, 0x20]
-    dumps SNaN             = BS.pack [31, 0x21]
+instance (MummySerializable a) => MummySerializable (MaybeANumber a) where
+    dumps SNaN       = BS.pack [0x1F, 0x21]
+    dumps NaN        = BS.pack [0x1F, 0x20]
+    dumps (InFact n) = dumps n
 
 
 -- date dumping
