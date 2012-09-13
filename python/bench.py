@@ -13,6 +13,10 @@ except ImportError:
 import string
 
 try:
+    import bson
+except ImportError:
+    bson = None
+try:
     import yajl
 except ImportError:
     yajl = None
@@ -78,6 +82,8 @@ if yajl:
     contenders.append(('py-yajl', (yajl.dumps, yajl.loads)))
 if cjson:
     contenders.append(('cjson', (cjson.encode, cjson.decode)))
+if bson:
+    contenders.append(('bson', (bson.BSON.encode, lambda s: bson.BSON(s).decode())))
 contenders.append(('cPickle (protocol 2)',
     (lambda x: cPickle.dumps(x, 2), cPickle.loads)))
 contenders.append(('cPickle (protocol 1)',
