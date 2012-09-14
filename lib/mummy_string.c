@@ -14,8 +14,7 @@ mummy_string_new(int initial_buffer) {
     str->offset = 0;
     str->len = initial_buffer;
 
-    str->data = malloc(initial_buffer);
-    if (!(str->data = malloc(initial_buffer))) {
+    if (initial_buffer && !(str->data = malloc(initial_buffer))) {
         free(str);
         return NULL;
     }
