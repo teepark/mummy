@@ -1,6 +1,6 @@
 *.pyc
 .*.sw[po]
-python/build/*
-python/dist/*
-python/*.egg-info/*
-python/MANIFEST.in
+build/*
+dist/*
+*.egg-info/*
+MANIFEST.in

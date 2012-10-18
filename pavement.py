@@ -13,6 +13,7 @@ info = dict(
     name="mummy",
     description="fast, efficient serialization",
     packages=["mummy", "oldmummy"],
+    package_dir={'': 'python'},
     version="0.1",
     author="Travis Parker",
     author_email="travis.parker@gmail.com",
@@ -22,15 +23,15 @@ if sys.subversion[0].lower() != 'pypy':
     info['ext_modules'] = [
         Extension(
             '_mummy',
-            ['dump.c', 'load.c', 'mummymodule.c',
-                '../lzf/lzf_c.c', '../lzf/lzf_d.c',
-                '../lib/mummy_string.c', '../lib/dump.c', '../lib/load.c'],
-            include_dirs=('.', '../lzf', '../include'),
+            ['python/dump.c', 'python/load.c', 'python/mummymodule.c',
+                'lzf/lzf_c.c', 'lzf/lzf_d.c',
+                'lib/mummy_string.c', 'lib/dump.c', 'lib/load.c'],
+            include_dirs=('python', 'lzf', 'include'),
             extra_compile_args=['-Wall']),
         Extension(
             '_oldmummy',
-            ['_old_mummy.c', '../lzf/lzf_c.c', '../lzf/lzf_d.c'],
-            include_dirs=('.', '../lzf'),
+            ['python/_old_mummy.c', 'lzf/lzf_c.c', 'lzf/lzf_d.c'],
+            include_dirs=('python', 'lzf'),
             extra_compile_args=['-Wall']),
         ]
 
@@ -69,4 +70,4 @@ def clean():
 
 @task
 def test():
-    sh("nosetests")
+    sh("cd python; nosetests")
