@@ -283,9 +283,10 @@ python_loads(PyObject *self, PyObject *data) {
         return NULL;
     }
 
-    str = mummy_string_wrap(((PyStringObject *)data)->ob_sval,
-            PyBytes_GET_SIZE(data));
+    str = mummy_string_wrap(PyBytes_AS_STRING(data), PyBytes_GET_SIZE(data));
 
+    /* don't have mummy_string_decompress free the buffer,
+       but have it tell us whether we should or not */
     if ((err = mummy_string_decompress(str, 0, &free_buf))) {
         PyErr_Format(PyExc_ValueError, "lzf decompression failed (%d)", err);
         mummy_string_free(str, free_buf);
