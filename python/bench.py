@@ -32,6 +32,10 @@ try:
 	import wbin
 except ImportError:
 	wbin = None
+try:
+    import msgpack
+except ImportError:
+    msgpack = None
 
 default_data = {
     "name": "Foo",
@@ -58,10 +62,22 @@ def profile(serial, deserial, data=None, x=100*1000):
     return (ttt(serial, data, x), ttt(deserial, squashed, x), len(squashed))
 
 
+def equalish(a, b):
+    if isinstance(a, (tuple, list)) and isinstance(b, (tuple, list)):
+        a, b = tuple(a), tuple(b)
+        for suba, subb in zip(a, b):
+            if not equalish(suba, subb):
+                return False
+        return True
+    if isinstance(a, dict) and isinstance(b, dict):
+        return equalish(a.items(), b.items())
+    return a == b
+
+
 def test(serial, deserial, data=None):
     if not data:
         data = default_data
-    assert deserial(serial(data)) == data
+    assert equalish(deserial(serial(data)), data)
 
 
 def format(flt, prec=3):
@@ -78,6 +94,8 @@ contenders = [
         ('oldmummy', (oldmummy.dumps, oldmummy.loads))]
 if wbin:
 	contenders.append(('wirebin', (wbin.serialize, wbin.deserialize)))
+if msgpack:
+    contenders.append(('msgpack', (msgpack.dumps, msgpack.loads)))
 if yajl:
     contenders.append(('py-yajl', (yajl.dumps, yajl.loads)))
 if cjson:
