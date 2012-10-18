@@ -1,6 +1,8 @@
 #ifndef _MUMMY_H
 #define _MUMMY_H
 
+#include <stdlib.h>
+
 /*
  * platform-specific byte-swapping macros
  */
