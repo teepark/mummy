@@ -51,8 +51,8 @@ dict schemas:
           instance or tuple
         - by extension, allows any keys of this type in the validated dict (as
           long as their values match the paired sub-schema)
-    - if a value is an OPTIONAL, specifies that the corresponding key doesn't
-      necessarily have to match anything in the validated object
+    - if a key is an OPTIONAL, specifies that it doesn't necessarily have to
+      match anything in the validated object
 
 UNION schemas:
     - instances of UNION, the constructor of which accepts any number of
@@ -216,7 +216,7 @@ class OPTIONAL(object):
         self.schema = schema
 
     def __repr__(self):
-        return "OPTIONAL(%r)" % (self.schema,)
+        return "<OPTIONAL (%r)>" % (self.schema,)
 
 def _optional(x):
     return isinstance(x, OPTIONAL)
@@ -230,7 +230,7 @@ class UNION(object):
         self.options = options
 
     def __repr__(self):
-        return "UNION(%r)" % (list(self.options),)
+        return "<UNION (%r)>" % (list(self.options),)
 
 class ANY(object):
     "validates any object successfully"
@@ -619,7 +619,6 @@ class Message(object):
         return self._transformation
 
     def dumps(self):
-        self.validate()
         return dumps(self.transform())
 
     @classmethod
