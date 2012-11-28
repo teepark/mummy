@@ -93,7 +93,7 @@ from .serialization import \
 from .schemas import Message, OPTIONAL, UNION, ANY
 
 
-VERSION = (1, 0, 0, "")
+VERSION = (1, 0, 1, "")
 __version__ = ".".join(filter(None, map(str, VERSION)))
 
 
