@@ -1,0 +1,201 @@
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>mummy.serialization – Fast, Effecient Serialization and Deserialization &mdash; mummy 1.0.0 documentation</title>
+    
+    <link rel="stylesheet" href="../static/nature.css" type="text/css" />
+    <link rel="stylesheet" href="../static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../',
+        VERSION:     '1.0.0',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../static/jquery.js"></script>
+    <script type="text/javascript" src="../static/underscore.js"></script>
+    <script type="text/javascript" src="../static/doctools.js"></script>
+    <link rel="top" title="mummy 1.0.0 documentation" href="../index.html" />
+    <link rel="next" title="mummy.schemas – Data Structure Validation and Squashing" href="schemas.html" />
+    <link rel="prev" title="Welcome to mummy’s documentation!" href="../index.html" /> 
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="schemas.html" title="mummy.schemas – Data Structure Validation and Squashing"
+             accesskey="N">next</a> |</li>
+        <li class="right" >
+          <a href="../index.html" title="Welcome to mummy’s documentation!"
+             accesskey="P">previous</a> |</li>
+        <li><a href="../index.html">mummy 1.0.0 documentation</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <div class="section" id="module-mummy.serialization">
+<span id="mummy-serialization-fast-effecient-serialization-and-deserialization"></span><h1><a class="reference internal" href="#module-mummy.serialization" title="mummy.serialization"><tt class="xref py py-mod docutils literal"><span class="pre">mummy.serialization</span></tt></a> &#8211; Fast, Effecient Serialization and Deserialization<a class="headerlink" href="#module-mummy.serialization" title="Permalink to this headline">¶</a></h1>
+<dl class="function">
+<dt id="mummy.serialization.loads">
+<tt class="descclassname">mummy.serialization.</tt><tt class="descname">loads</tt><big>(</big><big>)</big><a class="headerlink" href="#mummy.serialization.loads" title="Permalink to this definition">¶</a></dt>
+<dd><p>deserialize a mummy string to a python object</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>serialized</strong> (<em>bytestring</em>) &#8211; the serialized string to load</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">the python data</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="mummy.serialization.dumps">
+<tt class="descclassname">mummy.serialization.</tt><tt class="descname">dumps</tt><big>(</big><big>)</big><a class="headerlink" href="#mummy.serialization.dumps" title="Permalink to this definition">¶</a></dt>
+<dd><p>serialize a native python object into an mummy string</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>object</strong> &#8211; the python object to serialize</li>
+<li><strong>default</strong> (<em>function</em>) &#8211; If the &#8216;object&#8217; parameter is not serializable and this parameter is
+provided, this function will be used to generate a fallback value to
+serialize. It should take one argument (the original object), and
+return something serializable.</li>
+<li><strong>compress</strong> (<em>bool</em>) &#8211; whether or not to attempt to compress the serialized data (default
+True)</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last">the bytestring of the serialized data</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="mummy.serialization.pure_python_loads">
+<tt class="descclassname">mummy.serialization.</tt><tt class="descname">pure_python_loads</tt><big>(</big><em>data</em><big>)</big><a class="headerlink" href="#mummy.serialization.pure_python_loads" title="Permalink to this definition">¶</a></dt>
+<dd><p>convert a mummy string into the python object it represents</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>serialized</strong> (<em>bytestring</em>) &#8211; the serialized string to load</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">the python data</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="mummy.serialization.pure_python_dumps">
+<tt class="descclassname">mummy.serialization.</tt><tt class="descname">pure_python_dumps</tt><big>(</big><em>item</em>, <em>default=None</em>, <em>depth=0</em>, <em>compress=True</em><big>)</big><a class="headerlink" href="#mummy.serialization.pure_python_dumps" title="Permalink to this definition">¶</a></dt>
+<dd><p>serialize a native python object into a mummy string</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>object</strong> &#8211; the python object to serialize</li>
+<li><strong>default</strong> (<em>function</em>) &#8211; If the &#8216;object&#8217; parameter is not serializable and this parameter is
+provided, this function will be used to generate a fallback value to
+serialize. It should take one argument (the original object), and
+return something serilizable.</li>
+<li><strong>compress</strong> (<em>bool</em>) &#8211; whether or not to attempt to compress the serialized data (default
+True)</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last">the bytestring of the serialized data</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+  <h4>Previous topic</h4>
+  <p class="topless"><a href="../index.html"
+                        title="previous chapter">Welcome to mummy&#8217;s documentation!</a></p>
+  <h4>Next topic</h4>
+  <p class="topless"><a href="schemas.html"
+                        title="next chapter"><tt class="docutils literal docutils literal"><span class="pre">mummy.schemas</span></tt> &#8211; Data Structure Validation and Squashing</a></p>
+  <h3>This Page</h3>
+  <ul class="this-page-menu">
+    <li><a href="../sources/mummy/serialization.txt"
+           rel="nofollow">Show Source</a></li>
+  </ul>
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="schemas.html" title="mummy.schemas – Data Structure Validation and Squashing"
+             >next</a> |</li>
+        <li class="right" >
+          <a href="../index.html" title="Welcome to mummy’s documentation!"
+             >previous</a> |</li>
+        <li><a href="../index.html">mummy 1.0.0 documentation</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; Copyright 2012, Travis J Parker.
+      Created using <a href="http://sphinx.pocoo.org/">Sphinx</a> 1.1.3.
+    </div>
+  </body>
+</html>

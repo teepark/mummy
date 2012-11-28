@@ -1,0 +1,365 @@
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>mummy.schemas – Data Structure Validation and Squashing &mdash; mummy 1.0.0 documentation</title>
+    
+    <link rel="stylesheet" href="../static/nature.css" type="text/css" />
+    <link rel="stylesheet" href="../static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../',
+        VERSION:     '1.0.0',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../static/jquery.js"></script>
+    <script type="text/javascript" src="../static/underscore.js"></script>
+    <script type="text/javascript" src="../static/doctools.js"></script>
+    <link rel="top" title="mummy 1.0.0 documentation" href="../index.html" />
+    <link rel="prev" title="mummy.serialization – Fast, Effecient Serialization and Deserialization" href="serialization.html" /> 
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="serialization.html" title="mummy.serialization – Fast, Effecient Serialization and Deserialization"
+             accesskey="P">previous</a> |</li>
+        <li><a href="../index.html">mummy 1.0.0 documentation</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <div class="section" id="module-mummy.schemas">
+<span id="mummy-schemas-data-structure-validation-and-squashing"></span><h1><a class="reference internal" href="#module-mummy.schemas" title="mummy.schemas"><tt class="xref py py-mod docutils literal"><span class="pre">mummy.schemas</span></tt></a> &#8211; Data Structure Validation and Squashing<a class="headerlink" href="#module-mummy.schemas" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="simple-schemas">
+<h2>simple schemas<a class="headerlink" href="#simple-schemas" title="Permalink to this headline">¶</a></h2>
+<blockquote>
+<div><ul>
+<li><dl class="first docutils">
+<dt>just a basic atomic python type (the type object itself)</dt>
+<dd><ul class="first last simple">
+<li>bool</li>
+<li>int (also validates longs in python 2.x)</li>
+<li>float</li>
+<li>str</li>
+</ul>
+</dd>
+</dl>
+</li>
+<li><p class="first">asserts that the validated object is an instance</p>
+</li>
+</ul>
+</div></blockquote>
+</div>
+<div class="section" id="simple-instance-schemas">
+<h2>simple instance schemas<a class="headerlink" href="#simple-instance-schemas" title="Permalink to this headline">¶</a></h2>
+<blockquote>
+<div><ul class="simple">
+<li>an instance of any of the atomic python types (bool, int, float, str)</li>
+<li>asserts that the validated object is equal</li>
+</ul>
+</div></blockquote>
+</div>
+<div class="section" id="tuple-schemas">
+<h2>tuple schemas<a class="headerlink" href="#tuple-schemas" title="Permalink to this headline">¶</a></h2>
+<blockquote>
+<div><ul>
+<li><p class="first">assert that the validated object is a tuple</p>
+</li>
+<li><p class="first">assets that the validated tuple is the same length (with a caveat related
+to OPTIONALs, see below)</p>
+</li>
+<li><p class="first">pairs up the items of the validated tuple with the sub-schemas in the
+schema tuple and asserts that they all match</p>
+</li>
+<li><p class="first">sub-schemas may be OPTIONALs, in which case they don&#8217;t have to be present
+at all in the validated tuple</p>
+<blockquote>
+<div><ul class="simple">
+<li>all OPTIONALs must come after all non-OPTIONALs so that it is
+possible to match everything up</li>
+<li>the n objects in the validated tuple after all non-OPTIONALs will be
+matched up with the <em>first</em> n OPTIONALs in the schema tuple in order
+(so for example the second OPTIONAL may be be present unless the
+first one is)</li>
+</ul>
+</div></blockquote>
+</li>
+</ul>
+</div></blockquote>
+</div>
+<div class="section" id="list-schemas">
+<h2>list schemas<a class="headerlink" href="#list-schemas" title="Permalink to this headline">¶</a></h2>
+<blockquote>
+<div><ul class="simple">
+<li>assert that the validated object is itself a list</li>
+<li>only homogeneous lists may be validated, so the schema list must be of
+length 0 or 1 (although &#8220;homogeneous&#8221; is in terms of the sub-schemata,
+which may actually be UNIONs)</li>
+<li>if the schema list is empty it will only match an empty list</li>
+<li>the item in the list schema is a schema which is used to match all the
+contents of the validated list</li>
+<li>if the item in the schema list is an OPTIONAL, the list is allowed to be
+empty</li>
+</ul>
+</div></blockquote>
+</div>
+<div class="section" id="dict-schemas">
+<h2>dict schemas<a class="headerlink" href="#dict-schemas" title="Permalink to this headline">¶</a></h2>
+<blockquote>
+<div><ul>
+<li><p class="first">assert that the validated object is a dict</p>
+</li>
+<li><p class="first">values are schemas used to validate the validated dict&#8217;s values</p>
+</li>
+<li><p class="first">keys are used to match up the sub-schemas to their values</p>
+</li>
+<li><dl class="first docutils">
+<dt>keys may be instances of simple types (bool, int, float, str)</dt>
+<dd><ul class="first last simple">
+<li>asserts that the exact key is present, and matches the corresponding
+value to the sub-schema</li>
+</ul>
+</dd>
+</dl>
+</li>
+<li><dl class="first docutils">
+<dt>keys may be simple type objects (the types, not instances)</dt>
+<dd><ul class="first last simple">
+<li>matches any key of that type that is not matched by a simple type
+instance or tuple</li>
+<li>by extension, allows any keys of this type in the validated dict (as
+long as their values match the paired sub-schema)</li>
+</ul>
+</dd>
+</dl>
+</li>
+<li><p class="first">if a key is an OPTIONAL, specifies that it doesn&#8217;t necessarily have to
+match anything in the validated object</p>
+</li>
+</ul>
+</div></blockquote>
+</div>
+<div class="section" id="union-schemas">
+<h2>UNION schemas<a class="headerlink" href="#union-schemas" title="Permalink to this headline">¶</a></h2>
+<blockquote>
+<div><ul class="simple">
+<li>instances of UNION, the constructor of which accepts any number of
+sub-schemas as arguments</li>
+<li>attempts matching the message against each of the sub-schemas, validates
+if any of them match</li>
+</ul>
+</div></blockquote>
+</div>
+<div class="section" id="optional-schemas">
+<h2>OPTIONAL schemas<a class="headerlink" href="#optional-schemas" title="Permalink to this headline">¶</a></h2>
+<blockquote>
+<div><ul class="simple">
+<li>only usable inside compound schema types (tuple, list, dict)</li>
+<li>specifies that a particular slot in the compound schema is optional</li>
+</ul>
+</div></blockquote>
+</div>
+<div class="section" id="any-schemas">
+<h2>ANY schemas<a class="headerlink" href="#any-schemas" title="Permalink to this headline">¶</a></h2>
+<blockquote>
+<div><ul class="simple">
+<li>ANY is a singleton that can be used as a schema simply to consider
+anything as valid</li>
+</ul>
+</div></blockquote>
+</div>
+<div class="section" id="rule-schemas">
+<h2>RULE schemas<a class="headerlink" href="#rule-schemas" title="Permalink to this headline">¶</a></h2>
+<blockquote>
+<div><ul class="simple">
+<li>the RULE constructor accepts a function as an argument; the function
+should take one argument and return a boolean. the schema requires that
+the function, when called on the matched message, returns True</li>
+</ul>
+</div></blockquote>
+</div>
+<div class="section" id="examples">
+<h2>Examples<a class="headerlink" href="#examples" title="Permalink to this headline">¶</a></h2>
+<p>A schema definition can be any of the above schema types and any allowed
+sub-schemas.</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="n">address_book_schema</span> <span class="o">=</span> <span class="p">[{</span>
+<span class="gp">... </span>    <span class="s">&#39;first_name&#39;</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+<span class="gp">... </span>    <span class="s">&#39;last_name&#39;</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+<span class="gp">... </span>    <span class="s">&#39;is_male&#39;</span><span class="p">:</span> <span class="nb">bool</span><span class="p">,</span>
+<span class="gp">... </span>    <span class="s">&#39;birthday&#39;</span><span class="p">:</span> <span class="n">datetime</span><span class="o">.</span><span class="n">date</span><span class="p">,</span>
+<span class="gp">... </span>    <span class="s">&#39;address&#39;</span><span class="p">:</span> <span class="p">{</span>
+<span class="gp">... </span>        <span class="s">&#39;street_name&#39;</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+<span class="gp">... </span>        <span class="s">&#39;street_number&#39;</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
+<span class="gp">... </span>        <span class="n">OPTIONAL</span><span class="p">(</span><span class="s">&#39;sub_number&#39;</span><span class="p">):</span> <span class="nb">str</span><span class="p">,</span> <span class="c"># apt # or similar (eg the B in 345B)</span>
+<span class="gp">... </span>        <span class="s">&#39;zip_code&#39;</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
+<span class="gp">... </span>        <span class="s">&#39;city&#39;</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+<span class="gp">... </span>        <span class="n">OPTIONAL</span><span class="p">(</span><span class="s">&#39;state&#39;</span><span class="p">):</span> <span class="nb">str</span><span class="p">,</span> <span class="c"># optional for countries without states</span>
+<span class="gp">... </span>        <span class="s">&#39;country&#39;</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+<span class="gp">... </span>    <span class="p">},</span>
+<span class="gp">... </span>    <span class="s">&#39;hobbies&#39;</span><span class="p">:</span> <span class="p">[</span><span class="n">OPTIONAL</span><span class="p">(</span><span class="nb">str</span><span class="p">)],</span>
+<span class="gp">... </span>    <span class="s">&#39;properties&#39;</span><span class="p">:</span> <span class="n">ANY</span><span class="p">,</span>
+<span class="gp">... </span><span class="p">}]</span>
+</pre></div>
+</div>
+<p>The API for schemas is just 5 names: OPTIONAL, UNION, ANY, RULE, and Message.
+The first 4 were explained above. Message is a base class you can use to create
+message classes; just give them a SCHEMA attribute of a valid schema and they
+can be used to validate, shorten, and serialize their instances.</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span> <span class="nn">mummy</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="k">class</span> <span class="nc">AddressBookMessage</span><span class="p">(</span><span class="n">mummy</span><span class="o">.</span><span class="n">Message</span><span class="p">):</span>
+<span class="gp">... </span>    <span class="n">SCHEMA</span> <span class="o">=</span> <span class="n">address_book_schema</span>
+<span class="gp">...</span>
+</pre></div>
+</div>
+<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="n">abm</span> <span class="o">=</span> <span class="n">AddressBookMessage</span><span class="p">([{</span>
+<span class="gp">... </span>    <span class="s">&#39;first_name&#39;</span><span class="p">:</span> <span class="s">&#39;Travis&#39;</span><span class="p">,</span>
+<span class="gp">... </span>    <span class="s">&#39;last_name&#39;</span><span class="p">:</span> <span class="s">&#39;Parker&#39;</span><span class="p">,</span>
+<span class="gp">... </span>    <span class="s">&#39;is_male&#39;</span><span class="p">:</span> <span class="bp">True</span><span class="p">,</span>
+<span class="gp">... </span>    <span class="s">&#39;birthday&#39;</span><span class="p">:</span> <span class="n">datetime</span><span class="o">.</span><span class="n">date</span><span class="p">(</span><span class="mi">1984</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">6</span><span class="p">),</span>
+<span class="gp">... </span>    <span class="s">&#39;address&#39;</span><span class="p">:</span> <span class="p">{</span>
+<span class="gp">... </span>        <span class="s">&#39;street_number&#39;</span><span class="p">:</span> <span class="mi">11</span><span class="p">,</span>
+<span class="gp">... </span>        <span class="s">&#39;zip_code&#39;</span><span class="p">:</span> <span class="mi">12345</span><span class="p">,</span>
+<span class="gp">... </span>        <span class="s">&#39;street_name&#39;</span><span class="p">:</span> <span class="s">&#39;None&#39;</span><span class="p">,</span>
+<span class="gp">... </span>        <span class="s">&#39;city&#39;</span><span class="p">:</span> <span class="s">&#39;Of&#39;</span><span class="p">,</span>
+<span class="gp">... </span>        <span class="s">&#39;state&#39;</span><span class="p">:</span> <span class="s">&#39;Your&#39;</span><span class="p">,</span>
+<span class="gp">... </span>        <span class="s">&#39;country&#39;</span><span class="p">:</span> <span class="s">&#39;Business&#39;</span><span class="p">,</span>
+<span class="gp">... </span>    <span class="p">},</span>
+<span class="gp">... </span>    <span class="s">&#39;hobbies&#39;</span><span class="p">:</span> <span class="p">[],</span>
+<span class="gp">... </span>    <span class="s">&#39;properties&#39;</span><span class="p">:</span> <span class="bp">None</span><span class="p">,</span>
+<span class="gp">... </span><span class="p">}])</span>
+<span class="gp">...</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">abm</span><span class="o">.</span><span class="n">validate</span><span class="p">()</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">abm</span><span class="o">.</span><span class="n">message</span>
+<span class="go">[{&#39;first_name&#39;: &#39;Travis&#39;, &#39;last_name&#39;: &#39;Parker&#39;, &#39;is_male&#39;: True, &#39;hobbies&#39;: [], &#39;birthday&#39;: datetime.date(1984, 1, 6), &#39;address&#39;: {&#39;city&#39;: &#39;Of&#39;, &#39;street_number&#39;: 11, &#39;country&#39;: &#39;Business&#39;, &#39;street_name&#39;: &#39;None&#39;, &#39;state&#39;: &#39;Your&#39;, &#39;zip_code&#39;: 12345}, &#39;properties&#39;: None}]</span>
+</pre></div>
+</div>
+<p>Instances of the message class are able to shorten the serialized data by
+removing information that is already present in the schema itself, and the
+message class itself is able to undo that transformation.</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="n">abm</span><span class="o">.</span><span class="n">transform</span><span class="p">()</span>
+<span class="go">[[[&#39;Of&#39;, &#39;Business&#39;, &#39;None&#39;, 11, 12345, &#39;Your&#39;, None], datetime.date(1984, 1, 6), &#39;Travis&#39;, [], True, &#39;Parker&#39;, None]]</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">AddressBookMessage</span><span class="o">.</span><span class="n">untransform</span><span class="p">(</span><span class="n">abm</span><span class="o">.</span><span class="n">transform</span><span class="p">())</span> <span class="o">==</span> <span class="n">abm</span><span class="o">.</span><span class="n">message</span>
+<span class="go">True</span>
+</pre></div>
+</div>
+<p>The result is that messages serialized through a Message class are much shorter
+than if the same data were serialized via basic mummy.dumps, but as long as the
+message receiver has the schema as well, no information is lost.</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="nb">len</span><span class="p">(</span><span class="n">abm</span><span class="o">.</span><span class="n">dumps</span><span class="p">())</span>
+<span class="go">64</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="nb">len</span><span class="p">(</span><span class="n">mummy</span><span class="o">.</span><span class="n">dumps</span><span class="p">(</span><span class="n">abm</span><span class="o">.</span><span class="n">message</span><span class="p">))</span>
+<span class="go">195</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">AddressBookMessage</span><span class="o">.</span><span class="n">loads</span><span class="p">(</span><span class="n">abm</span><span class="o">.</span><span class="n">dumps</span><span class="p">())</span><span class="o">.</span><span class="n">message</span> <span class="o">==</span> <span class="n">abm</span><span class="o">.</span><span class="n">message</span>
+<span class="go">True</span>
+</pre></div>
+</div>
+<dl class="class">
+<dt id="mummy.schemas.OPTIONAL">
+<em class="property">class </em><tt class="descclassname">mummy.schemas.</tt><tt class="descname">OPTIONAL</tt><big>(</big><em>schema</em><big>)</big><a class="headerlink" href="#mummy.schemas.OPTIONAL" title="Permalink to this definition">¶</a></dt>
+<dd><p>specifies that a piece of a schema is optional in some specific contexts</p>
+<ul class="simple">
+<li>as a dictionary key, allows that key to be left out</li>
+<li>as a member of a tuple schema, allows the message tuple to be left out</li>
+<li>as the only member of a list schema, allows the message list to be empty</li>
+</ul>
+</dd></dl>
+
+<dl class="class">
+<dt id="mummy.schemas.UNION">
+<em class="property">class </em><tt class="descclassname">mummy.schemas.</tt><tt class="descname">UNION</tt><big>(</big><em>*options</em><big>)</big><a class="headerlink" href="#mummy.schemas.UNION" title="Permalink to this definition">¶</a></dt>
+<dd><p>specify that a message may match any of the sub-schemas</p>
+</dd></dl>
+
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+  <h3><a href="../index.html">Table Of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#"><tt class="docutils literal"><span class="pre">mummy.schemas</span></tt> &#8211; Data Structure Validation and Squashing</a><ul>
+<li><a class="reference internal" href="#simple-schemas">simple schemas</a></li>
+<li><a class="reference internal" href="#simple-instance-schemas">simple instance schemas</a></li>
+<li><a class="reference internal" href="#tuple-schemas">tuple schemas</a></li>
+<li><a class="reference internal" href="#list-schemas">list schemas</a></li>
+<li><a class="reference internal" href="#dict-schemas">dict schemas</a></li>
+<li><a class="reference internal" href="#union-schemas">UNION schemas</a></li>
+<li><a class="reference internal" href="#optional-schemas">OPTIONAL schemas</a></li>
+<li><a class="reference internal" href="#any-schemas">ANY schemas</a></li>
+<li><a class="reference internal" href="#rule-schemas">RULE schemas</a></li>
+<li><a class="reference internal" href="#examples">Examples</a></li>
+</ul>
+</li>
+</ul>
+
+  <h4>Previous topic</h4>
+  <p class="topless"><a href="serialization.html"
+                        title="previous chapter"><tt class="docutils literal docutils literal"><span class="pre">mummy.serialization</span></tt> &#8211; Fast, Effecient Serialization and Deserialization</a></p>
+  <h3>This Page</h3>
+  <ul class="this-page-menu">
+    <li><a href="../sources/mummy/schemas.txt"
+           rel="nofollow">Show Source</a></li>
+  </ul>
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="serialization.html" title="mummy.serialization – Fast, Effecient Serialization and Deserialization"
+             >previous</a> |</li>
+        <li><a href="../index.html">mummy 1.0.0 documentation</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; Copyright 2012, Travis J Parker.
+      Created using <a href="http://sphinx.pocoo.org/">Sphinx</a> 1.1.3.
+    </div>
+  </body>
+</html>
