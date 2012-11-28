@@ -10,9 +10,27 @@ PyDateTime_CAPI *PyDateTimeCAPI;
 
 static PyMethodDef methods[] = {
     {"dumps", (PyCFunction)python_dumps, METH_VARARGS | METH_KEYWORDS,
-        "serialize a native python object into an mummy string"},
+        "serialize a native python object into an mummy string\n\
+\n\
+    :param object: the python object to serialize\n\
+    :param function default:\n\
+        If the 'object' parameter is not serializable and this parameter is\n\
+        provided, this function will be used to generate a fallback value to\n\
+        serialize. It should take one argument (the original object), and\n\
+        return something serializable.\n\
+    :param bool compress:\n\
+        whether or not to attempt to compress the serialized data (default\n\
+        True)\n\
+\n\
+    :returns: the bytestring of the serialized data\n\
+"},
     {"loads", (PyCFunction)python_loads, METH_O,
-        "deserialize a mummy string to a python object"},
+        "deserialize a mummy string to a python object\n\
+\n\
+    :param bytestring serialized: the serialized string to load\n\
+\n\
+    :returns: the python data\n\
+"},
     {NULL, NULL, 0, NULL}
 };
 

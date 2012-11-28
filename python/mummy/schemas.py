@@ -1,7 +1,7 @@
 """
-SCHEMAS:
+simple schemas
+--------------
 
-simple schemas:
     - just a basic atomic python type (the type object itself)
         - bool
         - int (also validates longs in python 2.x)
@@ -9,11 +9,15 @@ simple schemas:
         - str
     - asserts that the validated object is an instance
 
-simple instance schemas:
+simple instance schemas
+-----------------------
+
     - an instance of any of the atomic python types (bool, int, float, str)
     - asserts that the validated object is equal
 
-tuple schemas:
+tuple schemas
+-------------
+
     - assert that the validated object is a tuple
     - assets that the validated tuple is the same length (with a caveat related
       to OPTIONALs, see below)
@@ -28,7 +32,9 @@ tuple schemas:
           (so for example the second OPTIONAL may be be present unless the
           first one is)
 
-list schemas:
+list schemas
+------------
+
     - assert that the validated object is itself a list
     - only homogeneous lists may be validated, so the schema list must be of
       length 0 or 1 (although "homogeneous" is in terms of the sub-schemata,
@@ -39,7 +45,8 @@ list schemas:
     - if the item in the schema list is an OPTIONAL, the list is allowed to be
       empty
 
-dict schemas:
+dict schemas
+------------
     - assert that the validated object is a dict
     - values are schemas used to validate the validated dict's values
     - keys are used to match up the sub-schemas to their values
@@ -54,25 +61,35 @@ dict schemas:
     - if a key is an OPTIONAL, specifies that it doesn't necessarily have to
       match anything in the validated object
 
-UNION schemas:
+UNION schemas
+-------------
+
     - instances of UNION, the constructor of which accepts any number of
       sub-schemas as arguments
     - attempts matching the message against each of the sub-schemas, validates
       if any of them match
 
-OPTIONAL schemas:
+OPTIONAL schemas
+----------------
+
     - only usable inside compound schema types (tuple, list, dict)
     - specifies that a particular slot in the compound schema is optional
 
-ANY schemas:
+ANY schemas
+-----------
+
     - ANY is a singleton that can be used as a schema simply to consider
       anything as valid
 
-RULE schemas:
+RULE schemas
+------------
+
     - the RULE constructor accepts a function as an argument; the function
       should take one argument and return a boolean. the schema requires that
       the function, when called on the matched message, returns True
 
+Examples
+--------
 
 A schema definition can be any of the above schema types and any allowed
 sub-schemas.
@@ -106,25 +123,24 @@ can be used to validate, shorten, and serialize their instances.
 ...     SCHEMA = address_book_schema
 ...
 
-abm = AddressBookMessage([{
-    'first_name': 'Travis',
-    'last_name': 'Parker',
-    'is_male': True,
-    'birthday': datetime.date(1984, 1, 6),
-    'address': {
-        'street_number': 11,
-        'zip_code': 12345,
-        'street_name': 'None',
-        'city': 'Of',
-        'state': 'Your',
-        'country': 'Business',
-    },
-    'hobbies': [],
-    'properties': None,
-}])
-
+>>> abm = AddressBookMessage([{
+...     'first_name': 'Travis',
+...     'last_name': 'Parker',
+...     'is_male': True,
+...     'birthday': datetime.date(1984, 1, 6),
+...     'address': {
+...         'street_number': 11,
+...         'zip_code': 12345,
+...         'street_name': 'None',
+...         'city': 'Of',
+...         'state': 'Your',
+...         'country': 'Business',
+...     },
+...     'hobbies': [],
+...     'properties': None,
+... }])
+...
 >>> abm.validate()
-
 >>> abm.message
 [{'first_name': 'Travis', 'last_name': 'Parker', 'is_male': True, 'hobbies': [], 'birthday': datetime.date(1984, 1, 6), 'address': {'city': 'Of', 'street_number': 11, 'country': 'Business', 'street_name': 'None', 'state': 'Your', 'zip_code': 12345}, 'properties': None}]
 

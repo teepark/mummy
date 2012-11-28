@@ -93,5 +93,9 @@ from .serialization import \
 from .schemas import Message, OPTIONAL, UNION, ANY
 
 
+VERSION = (1, 0, 0, "")
+__version__ = ".".join(filter(None, map(str, VERSION)))
+
+
 __all__ = ["loads", "dumps", "pure_python_loads", "pure_python_dumps",
         "has_extension", "Message", "OPTIONAL", "UNION", "ANY"]

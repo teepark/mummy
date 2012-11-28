@@ -9,14 +9,26 @@ from paver.path import path
 from paver.setuputils import setup
 
 
+VERSION = (1, 0, 0, "")
+
 info = dict(
     name="mummy",
     description="fast, efficient serialization",
     packages=["mummy", "oldmummy"],
     package_dir={'': 'python'},
-    version="0.1",
+    version=".".join(filter(None, map(str, VERSION))),
     author="Travis Parker",
     author_email="travis.parker@gmail.com",
+    url="http://github.com/teepark/mummy",
+    license="BSD",
+    classifiers=[
+        "Development Status :: 4 - Beta",
+        "Intended Audience :: Developers",
+        "License :: OSI Approved :: BSD License",
+        "Natural Language :: English",
+        "Programming Language :: C",
+        "Programming Language :: Python",
+    ],
 )
 
 if sys.subversion[0].lower() != 'pypy':
@@ -71,3 +83,8 @@ def clean():
 @task
 def test():
     sh("cd python; nosetests")
+
+@task
+def docs():
+    sh("find docs/source/mummy -name *.rst | xargs touch")
+    sh("cd docs; make html")

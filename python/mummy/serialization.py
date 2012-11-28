@@ -373,7 +373,20 @@ _dumpers = {
 }
 
 def pure_python_dumps(item, default=None, depth=0, compress=True):
-    "serialize a native python object into a mummy string"
+    """serialize a native python object into a mummy string
+    
+    :param object: the python object to serialize
+    :param function default:
+        If the 'object' parameter is not serializable and this parameter is
+        provided, this function will be used to generate a fallback value to
+        serialize. It should take one argument (the original object), and
+        return something serilizable.
+    :param bool compress:
+        whether or not to attempt to compress the serialized data (default
+        True)
+
+    :returns: the bytestring of the serialized data
+    """
     if default and not hasattr(default, "__call__"):
         raise TypeError("default must be callable or None")
     if depth >= MAX_DEPTH:
@@ -648,7 +661,12 @@ def _loads(data):
     return _loaders[kind](data[1:])
 
 def pure_python_loads(data):
-    "convert a mummy string into the python object it represents"
+    """convert a mummy string into the python object it represents
+    
+    :param bytestring serialized: the serialized string to load
+
+    :returns: the python data
+    """
     if not data:
         raise ValueError("no data from which to load")
     if ord(data[0]) >> 7:
