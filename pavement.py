@@ -52,6 +52,7 @@ setup(**info)
 MANIFEST = (
     "setup.py",
     "paver-minilib.zip",
+    "python/mummypy.h",
 )
 
 @task

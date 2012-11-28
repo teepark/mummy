@@ -1,4 +1,7 @@
+MANIFEST.in
 pavement.py
+paver-minilib.zip
+setup.py
 lib/dump.c
 lib/load.c
 lib/mummy_string.c
@@ -8,6 +11,7 @@ python/_old_mummy.c
 python/dump.c
 python/load.c
 python/mummymodule.c
+python/mummypy.h
 python/mummy/__init__.py
 python/mummy/django_serialization.py
 python/mummy/schemas.py
