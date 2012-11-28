@@ -2,9 +2,12 @@ MANIFEST.in
 pavement.py
 paver-minilib.zip
 setup.py
+include/mummy.h
 lib/dump.c
 lib/load.c
 lib/mummy_string.c
+lzf/lzf.h
+lzf/lzfP.h
 lzf/lzf_c.c
 lzf/lzf_d.c
 python/_old_mummy.c
