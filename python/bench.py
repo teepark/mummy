@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 
+import random
 import sys
 import time
 
@@ -37,17 +38,31 @@ try:
 except ImportError:
     msgpack = None
 
-default_data = {
-    "name": "Foo",
-    "type": "Bar",
+
+test_data = [
+"'this is a test'",
+'''[{
+    "name": "foo",
+    "type": "bar",
     "count": 1,
     "info": {
         "x": 203,
         "y": 102,
-        "z": list(range(5)),},}
+        "z": list(range(5))
+    }
+}] * 100''',
+"{'x': 203, 'y': 102, 'z': list(range(5))}",
+"[0, 1, 2, 3, 4]", 
+"{'a': {}}",
+#"[]",
+#"[[]] * 500",
+#"[random.random() for i in xrange(1000)]",
+#"[None] * 5000",
+#"[dict.fromkeys(map(str, range(20)), 14.3)] * 100",
+]
 
 
-def ttt(f, data=None, x=100*1000):
+def ttt(f, data=None, x=10*1000):
     start = time.time()
     while x:
         x -= 1
@@ -55,9 +70,7 @@ def ttt(f, data=None, x=100*1000):
     return time.time()-start
 
 
-def profile(serial, deserial, data=None, x=100*1000):
-    if not data:
-        data = default_data
+def profile(serial, deserial, data, x=10*1000):
     squashed = serial(data)
     return (ttt(serial, data, x), ttt(deserial, squashed, x), len(squashed))
 
@@ -74,9 +87,7 @@ def equalish(a, b):
     return a == b
 
 
-def test(serial, deserial, data=None):
-    if not data:
-        data = default_data
+def test(serial, deserial, data):
     assert equalish(deserial(serial(data)), data)
 
 
@@ -90,39 +101,43 @@ def padright(s, upto, padchar=" "):
 
 
 contenders = [
-        ('mummy', (mummy.dumps, mummy.loads)),
-        ('oldmummy', (oldmummy.dumps, oldmummy.loads))]
-if wbin:
-	contenders.append(('wirebin', (wbin.serialize, wbin.deserialize)))
-if msgpack:
-    contenders.append(('msgpack', (msgpack.dumps, msgpack.loads)))
-if yajl:
-    contenders.append(('py-yajl', (yajl.dumps, yajl.loads)))
-if cjson:
-    contenders.append(('cjson', (cjson.encode, cjson.decode)))
-if bson:
-    contenders.append(('bson', (bson.BSON.encode, lambda s: bson.BSON(s).decode())))
-contenders.append(('cPickle (protocol 2)',
-    (lambda x: cPickle.dumps(x, 2), cPickle.loads)))
-contenders.append(('cPickle (protocol 1)',
-    (lambda x: cPickle.dumps(x, 1), cPickle.loads)))
-contenders.append(('cPickle (protocol 0)', (cPickle.dumps, cPickle.loads)))
-if simplejson:
-    contenders.append(('simplejson', (simplejson.dumps, simplejson.loads)))
-contenders.append(('repr/eval', (repr, eval)))
-contenders.append(('mummy pure-python',
-	(mummy.pure_python_dumps, mummy.pure_python_loads)))
+        ('mummy', (lambda s: mummy.dumps(s, compress=False), mummy.loads)),
+        ('oldmummy', (lambda s: oldmummy.dumps(s, compress=False), oldmummy.loads))]
+#if wbin:
+#	contenders.append(('wirebin', (wbin.serialize, wbin.deserialize)))
+#if msgpack:
+#    contenders.append(('msgpack', (msgpack.dumps, msgpack.loads)))
+#if yajl:
+#    contenders.append(('py-yajl', (yajl.dumps, yajl.loads)))
+#if cjson:
+#    contenders.append(('cjson', (cjson.encode, cjson.decode)))
+#if bson:
+#    contenders.append(('bson', (bson.BSON.encode, lambda s: bson.BSON(s).decode())))
+#contenders.append(('cPickle (protocol 2)',
+#    (lambda x: cPickle.dumps(x, 2), cPickle.loads)))
+#contenders.append(('cPickle (protocol 1)',
+#    (lambda x: cPickle.dumps(x, 1), cPickle.loads)))
+#contenders.append(('cPickle (protocol 0)', (cPickle.dumps, cPickle.loads)))
+#if simplejson:
+#    contenders.append(('simplejson', (simplejson.dumps, simplejson.loads)))
+#contenders.append(('repr/eval', (repr, eval)))
+#contenders.append(('mummy pure-python',
+#	(mummy.pure_python_dumps, mummy.pure_python_loads)))
 
 if __name__ == '__main__':
     tmpl = string.Template(
         "$name serialize: $ser  deserialize: $des  total: $tot  size: $size")
-    for name, args in contenders:
-        test(*args)
-        x, y, size = profile(*args)
-        print(tmpl.substitute(
-            name=padright(name, 20),
-            ser=format(x),
-            des=format(y),
-            tot=format(x + y),
-            size=size,
-        ))
+    for sdata in test_data:
+        print sdata
+        data = eval(sdata)
+        for name, (serial, deserial) in contenders:
+            test(serial, deserial, data)
+            x, y, size = profile(serial, deserial, data)
+            print(tmpl.substitute(
+                name=padright(name, 20),
+                ser=format(x, 6),
+                des=format(y, 6),
+                tot=format(x + y, 6),
+                size=size,
+            ))
+        print

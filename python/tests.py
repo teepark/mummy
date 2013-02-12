@@ -68,7 +68,9 @@ class BasicMummyTests(unittest.TestCase):
             self.assertEqual(val, finished)
 
     def backwards_compatible(self, val):
+        print "new", self
         new_enc = newmummy.dumps(val)
+        print "old", self
         old_enc = oldmummy.dumps(val)
 
         # they serialize to the same string

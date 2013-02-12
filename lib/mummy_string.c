@@ -6,7 +6,7 @@
 #include "mummy.h"
 
 
-mummy_string *
+inline mummy_string *
 mummy_string_new(int initial_buffer) {
     mummy_string *str;
 
@@ -21,7 +21,7 @@ mummy_string_new(int initial_buffer) {
     return str;
 }
 
-mummy_string *
+inline mummy_string *
 mummy_string_wrap(char *buffer, int size) {
     mummy_string *str = mummy_string_new(0);
     str->data = buffer;
@@ -29,14 +29,18 @@ mummy_string_wrap(char *buffer, int size) {
     return str;
 }
 
-int
+
+/* replacing this with a macro in mummy.h for now
+inline int
 mummy_string_makespace(mummy_string *str, int size) {
     char *temp;
-    int oldlen = str->len;
+    int oldlen;
 
-    while (str->len - str->offset < size) str->len *= 2;
+    if (str->len - str->offset < size) {
+        oldlen = str->len;
 
-    if (oldlen != str->len) {
+        while (str->len - str->offset < size) str->len *= 2;
+
         temp = realloc(str->data, str->len);
         if (NULL == temp) {
             str->len = oldlen;
@@ -47,10 +51,11 @@ mummy_string_makespace(mummy_string *str, int size) {
 
     return 0;
 }
+*/
 
 /* compress from THE BEGINNING up to the cursor.
    everything after the cursor is thrown away */
-int
+inline int
 mummy_string_compress(mummy_string *str) {
     char *output, *temp;
     int compressed;
@@ -82,7 +87,7 @@ mummy_string_compress(mummy_string *str) {
     return 0;
 }
 
-int
+inline int
 mummy_string_decompress(mummy_string *str, char free_buffer, char *rc) {
     uint32_t ucsize;
     char *output;
@@ -113,7 +118,7 @@ mummy_string_decompress(mummy_string *str, char free_buffer, char *rc) {
     return 0;
 }
 
-void
+inline void
 mummy_string_free(mummy_string *str, char also_buffer) {
     if (also_buffer) free(str->data);
     free(str);

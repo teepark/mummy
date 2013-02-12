@@ -98,6 +98,7 @@ dump_one(PyObject *obj, mummy_string *str, PyObject *default_handler,
         if ((rc = mummy_open_list(str, pst))) {
             goto done;
         }
+        if (!pst) goto done;
         if (!(iterator = PyObject_GetIter(obj))) {
             goto fail;
         }
@@ -117,6 +118,7 @@ dump_one(PyObject *obj, mummy_string *str, PyObject *default_handler,
         pst = PyTuple_GET_SIZE(obj);
         if ((rc = mummy_open_tuple(str, pst)))
             goto done;
+        if (!pst) goto done;
         if (!(iterator = PyObject_GetIter(obj)))
             goto fail;
         while ((obj = PyIter_Next(iterator))) {
@@ -135,6 +137,7 @@ dump_one(PyObject *obj, mummy_string *str, PyObject *default_handler,
         pst = PySet_GET_SIZE(obj);
         if ((rc = mummy_open_set(str, pst)))
             goto done;
+        if (!pst) goto done;
         if (!(iterator = PyObject_GetIter(obj)))
             goto fail;
         while ((obj = PyIter_Next(iterator))) {
@@ -153,6 +156,7 @@ dump_one(PyObject *obj, mummy_string *str, PyObject *default_handler,
         pst = PyDict_Size(obj);
         if ((rc = mummy_open_hash(str, pst)))
             goto done;
+        if (!pst) goto done;
         pst = 0;
         while (PyDict_Next(obj, &pst, &key, &value)) {
             if (dump_one(key, str, default_handler, depth + 1)) goto done;

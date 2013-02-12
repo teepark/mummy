@@ -5,7 +5,7 @@
 #include "mummy.h"
 
 
-int
+inline int
 mummy_read_bool(mummy_string *str, char *result) {
     if (mummy_string_space(str) < 2) return -1;
     *result = str->data[str->offset + 1] ? 1 : 0;
@@ -13,7 +13,7 @@ mummy_read_bool(mummy_string *str, char *result) {
     return 0;
 }
 
-int
+inline int
 mummy_read_int(mummy_string *str, int64_t *result) {
     if (mummy_string_space(str) < 1) return -1;
 
@@ -42,7 +42,7 @@ mummy_read_int(mummy_string *str, int64_t *result) {
     return -2;
 }
 
-int
+inline int
 mummy_read_huge(mummy_string *str, int upto,
         char **result, int *result_len) {
     uint32_t len;
@@ -58,7 +58,7 @@ mummy_read_huge(mummy_string *str, int upto,
     return 0;
 }
 
-int
+inline int
 mummy_point_to_huge(mummy_string *str, char **buf, int *result_len) {
     uint32_t len;
 
@@ -72,7 +72,7 @@ mummy_point_to_huge(mummy_string *str, char **buf, int *result_len) {
     return 0;
 }
 
-int
+inline int
 mummy_read_float(mummy_string *str, double *result) {
     uint64_t output;
 
@@ -84,7 +84,7 @@ mummy_read_float(mummy_string *str, double *result) {
     return 0;
 }
 
-int
+inline int
 mummy_read_string(mummy_string *str, int upto, char **result, int *result_len) {
     uint32_t len;
 
@@ -122,7 +122,7 @@ mummy_read_string(mummy_string *str, int upto, char **result, int *result_len) {
     return -2;
 }
 
-int
+inline int
 mummy_point_to_string(mummy_string *str, char **target, int *result_len) {
     uint32_t len;
 
@@ -157,7 +157,7 @@ mummy_point_to_string(mummy_string *str, char **target, int *result_len) {
     return -2;
 }
 
-int
+inline int
 mummy_read_utf8(mummy_string *str, int upto, char **result, int *result_len) {
     uint32_t len;
 
@@ -195,7 +195,7 @@ mummy_read_utf8(mummy_string *str, int upto, char **result, int *result_len) {
     return -2;
 }
 
-int
+inline int
 mummy_point_to_utf8(mummy_string *str, char **target, int *result_len) {
     uint32_t len;
 
@@ -230,7 +230,7 @@ mummy_point_to_utf8(mummy_string *str, char **target, int *result_len) {
     return -2;
 }
 
-int
+inline int
 mummy_read_decimal(mummy_string *str,
         char *sign, int16_t *exponent, uint16_t *count, char **digits) {
     uint16_t dsize, bytes;
@@ -265,7 +265,7 @@ mummy_read_decimal(mummy_string *str,
     return 0;
 }
 
-int
+inline int
 mummy_read_specialnum(mummy_string *str, char *flags) {
     if (mummy_string_space(str) < 2) return -1;
     *flags = str->data[str->offset + 1];
@@ -273,7 +273,7 @@ mummy_read_specialnum(mummy_string *str, char *flags) {
     return 0;
 }
 
-int
+inline int
 mummy_read_date(mummy_string *str, short *year, char *month, char *day) {
     if (mummy_string_space(str) < 5) return -1;
     *year = ntohs(*(uint16_t *)(str->data + str->offset + 1));
@@ -283,7 +283,7 @@ mummy_read_date(mummy_string *str, short *year, char *month, char *day) {
     return 0;
 }
 
-int
+inline int
 mummy_read_time(mummy_string *str,
         char *hour, char *minute, char *second, int *microsecond) {
     if (mummy_string_space(str) < 7) return -1;
@@ -295,7 +295,7 @@ mummy_read_time(mummy_string *str,
     return 0;
 }
 
-int
+inline int
 mummy_read_datetime(mummy_string *str, short *year, char *month, char *day,
         char *hour, char *minute, char *second, int *microsecond) {
     if (mummy_string_space(str) < 11) return -1;
@@ -310,7 +310,7 @@ mummy_read_datetime(mummy_string *str, short *year, char *month, char *day,
     return 0;
 }
 
-int
+inline int
 mummy_read_timedelta(mummy_string *str, int *days, int *seconds,
         int *microseconds) {
     if (mummy_string_space(str) < 13) return -1;
@@ -321,7 +321,7 @@ mummy_read_timedelta(mummy_string *str, int *days, int *seconds,
     return 0;
 }
 
-int
+inline int
 mummy_container_size(mummy_string *str, uint32_t *result) {
     switch (mummy_type(str)) {
     case MUMMY_TYPE_SHORTLIST:
