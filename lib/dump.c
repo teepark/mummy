@@ -258,6 +258,7 @@ mummy_feed_timedelta(mummy_string *str, int days, int seconds,
     return 0;
 }
 
+/*
 inline int
 mummy_open_list(mummy_string *str, int len) {
     if (len < 256) {
@@ -275,6 +276,19 @@ mummy_open_list(mummy_string *str, int len) {
         str->data[str->offset++] = MUMMY_TYPE_LONGLIST;
         *(uint32_t *)(str->data + str->offset) = htonl((uint32_t)len);
         str->offset += 4;
+    }
+    return 0;
+}
+*/
+
+inline int
+mummy_open_list(mummy_string *str, int len) {
+    if (len < 256) {
+        mummy_open_short(str, len, MUMMY_TYPE_SHORTLIST);
+    } else if (len < 65536) {
+        mummy_open_med(str, len, MUMMY_TYPE_MEDLIST);
+    } else {
+        mummy_open_long(str, len, MUMMY_TYPE_LONGLIST);
     }
     return 0;
 }

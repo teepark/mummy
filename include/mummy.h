@@ -2,6 +2,8 @@
 #define _MUMMY_H
 
 #include <stdlib.h>
+#include "mummy_string.h"
+#include "dump.h"
 
 /*
  * platform-specific byte-swapping macros
@@ -84,22 +86,10 @@
 #define MUMMY_SPECIAL_NAN 0x20
 
 
-/* string with offset */
-typedef struct {
-    char *data;
-    int offset; /* cursor position */
-    int len; /* total capacity */
-} mummy_string;
-
-mummy_string *mummy_string_new(int);
-mummy_string *mummy_string_wrap(char *, int);
-
-
 /*************
  * reading API
  */
 #define mummy_type(str) (str)->data[(str)->offset] & 0x7fffffff
-#define mummy_string_space(str) (str)->len - (str)->offset
 
 /* read atoms */
 int mummy_read_bool(mummy_string *, char *);
@@ -122,15 +112,9 @@ int mummy_read_timedelta(mummy_string *, int *, int *, int *);
 /* determine container sizes */
 int mummy_container_size(mummy_string *, uint32_t *);
 
-int mummy_string_decompress(mummy_string *, char, char *);
-
 /*************
  * writing API
  */
-
-/* using a macro instead to see if it speeds things up
-int mummy_string_makespace(mummy_string *, int);
-*/
 
 /* write atoms */
 int mummy_feed_null(mummy_string *);
@@ -155,22 +139,5 @@ int mummy_open_list(mummy_string *, int);
 int mummy_open_tuple(mummy_string *, int);
 int mummy_open_set(mummy_string *, int);
 int mummy_open_hash(mummy_string *, int);
-
-int mummy_string_compress(mummy_string *);
-
-void mummy_string_free(mummy_string *str, char);
-
-#define mummy_string_makespace(str, size)                     \
-    char *temp; int oldlen;                                   \
-    if (str->len - str->offset < size) {                      \
-        oldlen = str->len;                                    \
-        while (str->len - str->offset < size) str->len <<= 1; \
-        temp = realloc(str->data, str->len);                  \
-        if (NULL == temp) {                                   \
-            str->len = oldlen;                                \
-            return ENOMEM;                                    \
-        }                                                     \
-        str->data = temp;                                     \
-    }
 
 #endif /* _MUMMY_H */

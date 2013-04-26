@@ -40,25 +40,26 @@ except ImportError:
 
 
 test_data = [
-"'this is a test'",
-'''[{
-    "name": "foo",
-    "type": "bar",
-    "count": 1,
-    "info": {
-        "x": 203,
-        "y": 102,
-        "z": list(range(5))
-    }
-}] * 100''',
-"{'x': 203, 'y': 102, 'z': list(range(5))}",
-"[0, 1, 2, 3, 4]", 
-"{'a': {}}",
+#"'this is a test'",
+#'''[{
+#    "name": "foo",
+#    "type": "bar",
+#    "count": 1,
+#    "info": {
+#        "x": 203,
+#        "y": 102,
+#        "z": list(range(5))
+#    }
+#}] * 100''',
+#"{'x': 203, 'y': 102, 'z': list(range(5))}",
+#"[0, 1, 2, 3, 4]", 
+#"7",
+#"{'a': {}}",
 #"[]",
 #"[[]] * 500",
 #"[random.random() for i in xrange(1000)]",
 #"[None] * 5000",
-#"[dict.fromkeys(map(str, range(20)), 14.3)] * 100",
+"[dict.fromkeys(map(str, range(20)), 14.3)] * 100",
 ]
 
 
@@ -101,12 +102,12 @@ def padright(s, upto, padchar=" "):
 
 
 contenders = [
-        ('mummy', (lambda s: mummy.dumps(s, compress=False), mummy.loads)),
-        ('oldmummy', (lambda s: oldmummy.dumps(s, compress=False), oldmummy.loads))]
-#if wbin:
-#	contenders.append(('wirebin', (wbin.serialize, wbin.deserialize)))
-#if msgpack:
-#    contenders.append(('msgpack', (msgpack.dumps, msgpack.loads)))
+        ('mummy', (mummy.dumps, mummy.loads)),
+        ('oldmummy', (oldmummy.dumps, oldmummy.loads))]
+if wbin:
+	contenders.append(('wirebin', (wbin.serialize, wbin.deserialize)))
+if msgpack:
+    contenders.append(('msgpack', (msgpack.dumps, msgpack.loads)))
 #if yajl:
 #    contenders.append(('py-yajl', (yajl.dumps, yajl.loads)))
 #if cjson:
