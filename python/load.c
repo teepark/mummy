@@ -125,6 +125,8 @@ load_one(mummy_string *str) {
                 Py_DECREF(value);
                 goto fail;
             }
+        Py_DECREF(key);
+        Py_DECREF(value);
         }
         goto done;
 
