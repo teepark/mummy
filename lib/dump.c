@@ -22,32 +22,26 @@ mummy_feed_bool(mummy_string *str, char b) {
 
 inline int
 mummy_feed_int(mummy_string *str, int64_t num) {
-    char size, type, contents[8];
-    memset(contents, 0, 8);
-
     if (-128 <= num && num < 128) {
-        size = 1;
-        type = MUMMY_TYPE_CHAR;
-        *(&contents[0]) = (int8_t)num;
+        mummy_string_makespace(str, 2);
+        str->data[str->offset++] = MUMMY_TYPE_CHAR;
+        str->data[str->offset++] = (int8_t)num;
     } else if (-32768 <= num && num < 32768) {
-        size = 2;
-        type = MUMMY_TYPE_SHORT;
-        *(int16_t *)(&contents[0]) = htons((int16_t)num);
+        mummy_string_makespace(str, 3);
+        str->data[str->offset++] = MUMMY_TYPE_SHORT;
+        *((int16_t *)(str->data + str->offset)) = htons((int16_t)num);
+        str->offset += 2;
     } else if (-2147483648LL <= num && num < 2147483648LL) {
-        size = 4;
-        type = MUMMY_TYPE_INT;
-        *(int32_t *)(&contents[0]) = htonl((int32_t)num);
+        mummy_string_makespace(str, 5);
+        str->data[str->offset++] = MUMMY_TYPE_INT;
+        *((int32_t *)(str->data + str->offset)) = htonl((int32_t)num);
+        str->offset += 4;
     } else {
-        size = 8;
-        type = MUMMY_TYPE_LONG;
-        *(int64_t *)(&contents[0]) = htonll((int64_t)num);
+        mummy_string_makespace(str, 9);
+        str->data[str->offset++] = MUMMY_TYPE_LONG;
+        *((int64_t *)(str->data + str->offset)) = htonll((int64_t)num);
+        str->offset += 8;
     }
-
-    mummy_string_makespace(str, size + 1);
-    str->data[str->offset++] = type;
-    memcpy(str->data + str->offset, contents, size);
-    str->offset += size;
-
     return 0;
 }
 

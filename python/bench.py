@@ -101,18 +101,18 @@ def padright(s, upto, padchar=" "):
 
 
 contenders = [
-        ('mummy', (lambda s: mummy.dumps(s, compress=False), mummy.loads)),
-        ('oldmummy', (lambda s: oldmummy.dumps(s, compress=False), oldmummy.loads))]
-#if wbin:
-#	contenders.append(('wirebin', (wbin.serialize, wbin.deserialize)))
-#if msgpack:
-#    contenders.append(('msgpack', (msgpack.dumps, msgpack.loads)))
-#if yajl:
-#    contenders.append(('py-yajl', (yajl.dumps, yajl.loads)))
-#if cjson:
-#    contenders.append(('cjson', (cjson.encode, cjson.decode)))
-#if bson:
-#    contenders.append(('bson', (bson.BSON.encode, lambda s: bson.BSON(s).decode())))
+        ('mummy', (lambda s: mummy.dumps(s), mummy.loads)),
+        ('oldmummy', (lambda s: oldmummy.dumps(s), oldmummy.loads))]
+if wbin:
+	contenders.append(('wirebin', (wbin.serialize, wbin.deserialize)))
+if msgpack:
+    contenders.append(('msgpack', (msgpack.dumps, msgpack.loads)))
+if yajl:
+    contenders.append(('py-yajl', (yajl.dumps, yajl.loads)))
+if cjson:
+    contenders.append(('cjson', (cjson.encode, cjson.decode)))
+if bson:
+    contenders.append(('bson', (bson.BSON.encode, lambda s: bson.BSON(s).decode())))
 #contenders.append(('cPickle (protocol 2)',
 #    (lambda x: cPickle.dumps(x, 2), cPickle.loads)))
 #contenders.append(('cPickle (protocol 1)',
