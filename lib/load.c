@@ -274,6 +274,17 @@ mummy_read_specialnum(mummy_string *str, char *flags) {
 }
 
 inline int
+mummy_read_fraction(mummy_string *str,
+        int64_t *numerator, int64_t *denominator) {
+    if (mummy_string_space(str) < 17) return -1;
+    *numerator = ntohll(*(int64_t *)(str->data + str->offset + 1));
+    str->offset += 9;
+    *denominator = ntohll(*(int64_t *)(str->data + str->offset));
+    str->offset += 8;
+    return 0;
+}
+
+inline int
 mummy_read_date(mummy_string *str, short *year, char *month, char *day) {
     if (mummy_string_space(str) < 5) return -1;
     *year = ntohs(*(uint16_t *)(str->data + str->offset + 1));

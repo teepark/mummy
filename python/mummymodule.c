@@ -5,6 +5,7 @@
 
 /* import decimal and datetime at mummy import time */
 PyObject *PyDecimalType;
+PyObject *PyFractionType;
 PyDateTime_CAPI *PyDateTimeCAPI;
 
 
@@ -49,7 +50,7 @@ static struct PyModuleDef _mummymodule = {
 
 PyMODINIT_FUNC
 PyInit__mummy(void) {
-    PyObject *mummy_module, *decimal_module;
+    PyObject *mummy_module, *decimal_module, *fractions_module;
 
     mummy_module = PyModule_Create(&_mummymodule);
 
@@ -59,13 +60,19 @@ PyInit__mummy(void) {
     decimal_module = PyImport_ImportModule("decimal");
     PyDecimalType = PyObject_GetAttrString(decimal_module, "Decimal");
     Py_INCREF(PyDecimalType);
+    Py_DECREF(decimal_module);
+
+    fractions_module = PyImport_ImportModule("fractions");
+    PyFractionType = PyObject_GetAttrString(fractions_module, "Fraction");
+    Py_INCREF(PyFractionType);
+    Py_DECREF(fractions_module);
 
     return module;
 }
 #else
 PyMODINIT_FUNC
 init_mummy(void) {
-    PyObject *decimal_module;
+    PyObject *decimal_module, *fractions_module;
 
     Py_InitModule("_mummy", methods);
 
@@ -76,5 +83,10 @@ init_mummy(void) {
     PyDecimalType = PyObject_GetAttrString(decimal_module, "Decimal");
     Py_INCREF(PyDecimalType);
     Py_DECREF(decimal_module);
+
+    fractions_module = PyImport_ImportModule("fractions");
+    PyFractionType = PyObject_GetAttrString(fractions_module, "Fraction");
+    Py_INCREF(PyFractionType);
+    Py_DECREF(fractions_module);
 }
 #endif

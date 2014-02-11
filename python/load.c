@@ -1,6 +1,7 @@
 #include "mummypy.h"
 
 extern PyDateTime_CAPI *PyDateTimeCAPI;
+extern PyObject *PyFractionType;
 extern PyObject *PyDecimalType;
 
 #define INVALID do {\
@@ -11,8 +12,17 @@ extern PyObject *PyDecimalType;
 
 
 static PyObject *
+python_num(int64_t num) {
+    if (-2147483648LL <= num && num < 2147483648LL) {
+        return PyInt_FromLong((long)num);
+    }
+    return PyLong_FromLongLong(num);
+}
+
+
+static PyObject *
 load_one(mummy_string *str) {
-    int64_t int_result = 0;
+    int64_t int_result = 0, int_result2;
     int i, microsecond;
     int days, seconds, microseconds;
     short year, expo;
@@ -131,7 +141,8 @@ load_one(mummy_string *str) {
         }
         goto done;
 
-    case MUMMY_TYPE_DATE: if (mummy_read_date(str, &year, &month, &day)) INVALID;
+    case MUMMY_TYPE_DATE:
+        if (mummy_read_date(str, &year, &month, &day)) INVALID;
         result = PyDateTimeCAPI->Date_FromDate(
                 year, month, day, PyDateTimeCAPI->DateType);
         goto done;
@@ -250,6 +261,26 @@ load_one(mummy_string *str) {
             return NULL;
         }
 
+    case MUMMY_TYPE_FRACTION:
+        if (mummy_read_fraction(str, &int_result, &int_result2)) INVALID;
+        if (NULL == (triple = PyTuple_New(2))) return NULL;
+
+        if (NULL == (value = python_num(int_result))) {
+            Py_DECREF(triple);
+            return NULL;
+        }
+        PyTuple_SET_ITEM(triple, 0, value);
+
+        if (NULL == (value = python_num(int_result2))) {
+            Py_DECREF(triple);
+            return NULL;
+        }
+        PyTuple_SET_ITEM(triple, 1, value);
+
+        result = PyObject_Call(PyFractionType, triple, NULL);
+        Py_DECREF(triple);
+        return result;
+
     default:
         PyErr_SetString(PyExc_ValueError, "invalid mummy (unrecognized type)");
         return NULL;
@@ -274,6 +305,7 @@ fail:
     Py_DECREF(result);
     return NULL;
 }
+
 
 PyObject *
 python_loads(PyObject *self, PyObject *data) {

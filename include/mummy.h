@@ -79,6 +79,7 @@
 #define MUMMY_TYPE_TIMEDELTA 0x1D
 #define MUMMY_TYPE_DECIMAL 0x1E
 #define MUMMY_TYPE_SPECIALNUM 0x1F
+#define MUMMY_TYPE_FRACTION 0x20
 
 #define MUMMY_SPECIAL_INFINITY 0x10
 #define MUMMY_SPECIAL_NAN 0x20
@@ -113,6 +114,7 @@ int mummy_read_utf8(mummy_string *, int, char **, int *);
 int mummy_point_to_utf8(mummy_string *, char **, int *);
 int mummy_read_decimal(mummy_string *, char *, int16_t *, uint16_t *, char **);
 int mummy_read_specialnum(mummy_string *, char *);
+int mummy_read_fraction(mummy_string *, int64_t *, int64_t *);
 int mummy_read_date(mummy_string *, short *, char *, char *);
 int mummy_read_time(mummy_string *, char *, char *, char *, int *);
 int mummy_read_datetime(mummy_string *, short *, char *, char *,
@@ -144,6 +146,7 @@ int mummy_feed_decimal(mummy_string *, char, int16_t, uint16_t, char *);
 /*int mummy_feed_va_decimal(mummy_string *, char, uint16_t, uint16_t, ...);*/
 int mummy_feed_infinity(mummy_string *, char);
 int mummy_feed_nan(mummy_string *, char);
+int mummy_feed_fraction(mummy_string *, int64_t, int64_t);
 int mummy_feed_date(mummy_string *, unsigned short, char, char);
 int mummy_feed_time(mummy_string *, char, char, char, int);
 int mummy_feed_datetime(

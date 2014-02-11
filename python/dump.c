@@ -1,8 +1,9 @@
 #include "mummypy.h"
 
 
-/* import decimal and datetime at mummy import time */
+/* import decimal, fraction and datetime at mummy import time */
 extern PyObject *PyDecimalType;
+extern PyObject *PyFractionType;
 extern PyDateTime_CAPI *PyDateTimeCAPI;
 
 
@@ -12,7 +13,7 @@ dump_one(PyObject *obj, mummy_string *str, PyObject *default_handler,
     int i, rc = 0;
     size_t size;
     long l;
-    long long ll;
+    long long ll, ll2;
     char c, *buf;
     PyObject *key, *value, *iterator, *args;
     Py_ssize_t pst;
@@ -57,6 +58,7 @@ dump_one(PyObject *obj, mummy_string *str, PyObject *default_handler,
             size = _PyLong_NumBits(obj) + 1;
             size = (size >> 3) + (size & 0x7 ? 1 : 0);
 
+            /* TODO: this extra copy shouldn't be necessary */
             if (!(buf = malloc(size))) {
                 PyErr_SetString(PyExc_MemoryError, "out of memory");
                 return -1;
@@ -326,9 +328,28 @@ dump_one(PyObject *obj, mummy_string *str, PyObject *default_handler,
             if (EINVAL == rc) {
                 PyErr_SetString(PyExc_SystemError,
                         "mummy dump internal failure");
-                return -1;
+                goto fail;
             }
         }
+        goto done;
+    }
+
+    if (Py_TYPE(obj) == (PyTypeObject *)PyFractionType) {
+        if (NULL == (value = PyObject_GetAttrString(obj, "numerator")))
+            goto fail;
+        ll = PyInt_AsLongLong(value);
+        Py_DECREF(value);
+        if (-1 == ll && PyErr_Occurred())
+            goto fail;
+
+        if (NULL == (value = PyObject_GetAttrString(obj, "denominator")))
+            goto fail;
+        ll2 = PyInt_AsLongLong(value);
+        Py_DECREF(value);
+        if (-1 == ll2 && PyErr_Occurred())
+            goto fail;
+
+        rc = mummy_feed_fraction(str, (int64_t)ll, (int64_t)ll2);
         goto done;
     }
 

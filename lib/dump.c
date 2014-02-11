@@ -198,6 +198,17 @@ mummy_feed_nan(mummy_string *str, char is_snan) {
 }
 
 inline int
+mummy_feed_fraction(mummy_string *str, int64_t numerator, int64_t denominator) {
+    mummy_string_makespace(str, 17);
+    str->data[str->offset++] = MUMMY_TYPE_FRACTION;
+    *((int64_t *)(str->data + str->offset)) = htonll(numerator);
+    str->offset += 8;
+    *((int64_t *)(str->data + str->offset)) = htonll(denominator);
+    str->offset += 8;
+    return 0;
+}
+
+inline int
 mummy_feed_date(mummy_string *str, unsigned short year, char month, char day) {
     mummy_string_makespace(str, 5);
     str->data[str->offset++] = MUMMY_TYPE_DATE;

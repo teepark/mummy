@@ -1,5 +1,6 @@
 import datetime
 import decimal
+import fractions
 import itertools
 import struct
 import sys
@@ -88,6 +89,8 @@ MUMMY_TYPE_TIMEDELTA = 0x1D
 MUMMY_TYPE_DECIMAL = 0x1E
 MUMMY_TYPE_SPECIALNUM = 0x1F
 
+MUMMY_TYPE_FRACTION = 0x20
+
 MUMMY_SPECIAL_INFINITY = 0x10
 MUMMY_SPECIAL_NAN = 0x20
 
@@ -175,6 +178,9 @@ def _get_type_code(x):
         if x.is_nan() or x.is_infinite():
             return MUMMY_TYPE_SPECIALNUM
         return MUMMY_TYPE_DECIMAL
+
+    if type(x) is fractions.Fraction:
+        return MUMMY_TYPE_FRACTION
 
     raise ValueError("%r cannot be serialized" % type(x))
 
@@ -336,6 +342,9 @@ def _dump_specialnum(x, depth=0, default=None):
     if x.is_infinite():
         return _dump_uchar(MUMMY_SPECIAL_INFINITY | int(x < 0))
 
+def _dump_fraction(x, depth=0, default=None):
+    return struct.pack("!qq", x.numerator, x.denominator)
+
 
 _dumpers = {
     MUMMY_TYPE_NULL: _dump_none,
@@ -370,6 +379,7 @@ _dumpers = {
     MUMMY_TYPE_TIMEDELTA: _dump_timedelta,
     MUMMY_TYPE_DECIMAL: _dump_decimal,
     MUMMY_TYPE_SPECIALNUM: _dump_specialnum,
+    MUMMY_TYPE_FRACTION: _dump_fraction,
 }
 
 def pure_python_dumps(item, default=None, depth=0, compress=True):
@@ -620,6 +630,9 @@ def _load_specialnum(x):
             return decimal.Decimal("sNaN"), 1
         return decimal.Decimal("NaN"), 1
 
+def _load_fraction(x):
+    return fractions.Fraction(*struct.unpack("!qq", x[:16])), 16
+
 
 _loaders = {
     MUMMY_TYPE_NULL: _load_none,
@@ -654,6 +667,7 @@ _loaders = {
     MUMMY_TYPE_TIMEDELTA: _load_timedelta,
     MUMMY_TYPE_DECIMAL: _load_decimal,
     MUMMY_TYPE_SPECIALNUM: _load_specialnum,
+    MUMMY_TYPE_FRACTION: _load_fraction,
 }
 
 def _loads(data):
