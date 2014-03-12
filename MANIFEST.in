@@ -1,0 +1,6 @@
+include setup.py
+include paver-minilib.zip
+include include/mummy.h
+include python/mummypy.h
+include lzf/lzf.h
+include lzf/lzfP.h
