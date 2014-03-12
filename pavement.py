@@ -9,7 +9,7 @@ from paver.path import path
 from paver.setuputils import setup
 
 
-VERSION = (1, 0, 1, "")
+VERSION = (1, 0, 2, "")
 
 info = dict(
     name="mummy",

@@ -3,3 +3,9 @@
 
 1.0.1 (11/27/2012)
     - build issues cleared up
+
+1.0.2 (03/12/2014)
+    - performance improvements
+    - memory leak fixes
+    - support for fractions.Fraction
+    - support for validating unicode instances
