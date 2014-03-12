@@ -7,12 +7,14 @@ simple schemas
         - int (also validates longs in python 2.x)
         - float
         - str
+        - unicode
     - asserts that the validated object is an instance
 
 simple instance schemas
 -----------------------
 
-    - an instance of any of the atomic python types (bool, int, float, str)
+    - an instance of any of the atomic python types (bool, int, float, str,
+      unicode)
     - asserts that the validated object is equal
 
 tuple schemas
@@ -50,7 +52,7 @@ dict schemas
     - assert that the validated object is a dict
     - values are schemas used to validate the validated dict's values
     - keys are used to match up the sub-schemas to their values
-    - keys may be instances of simple types (bool, int, float, str)
+    - keys may be instances of simple types (bool, int, float, str, unicode)
         - asserts that the exact key is present, and matches the corresponding
           value to the sub-schema
     - keys may be simple type objects (the types, not instances)
@@ -206,7 +208,7 @@ else:
 
 
 _primitives = (
-        bool, int, float, str,
+        bool, int, float, str, unicode,
         datetime.date, datetime.time, datetime.datetime, datetime.timedelta,
         decimal.Decimal)
 _type_validations = {
@@ -214,6 +216,7 @@ _type_validations = {
     int: (int, long),
     float: float,
     str: str,
+    unicode: unicode,
     datetime.date: datetime.date,
     datetime.time: datetime.time,
     datetime.datetime: datetime.datetime,
@@ -396,6 +399,7 @@ _validators = {
     long: _validate_simple_instance,
     float: _validate_simple_instance,
     str: _validate_simple_instance,
+    unicode: _validate_simple_instance,
     type: _validate_simple,
     tuple: _validate_tuple,
     list: _validate_list,
@@ -484,6 +488,7 @@ _schema_validators = {
     long: _validate_simple_instance_schema,
     float: _validate_simple_instance_schema,
     str: _validate_simple_instance_schema,
+    unicode: _validate_simple_instance_schema,
     type: _validate_simple_schema,
     tuple: _validate_tuple_schema,
     list: _validate_list_schema,
