@@ -2,6 +2,7 @@
 #define _MUMMY_H
 
 #include <stdlib.h>
+#include <stdint.h>
 
 /*
  * platform-specific byte-swapping macros
